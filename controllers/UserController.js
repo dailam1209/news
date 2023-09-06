@@ -97,10 +97,9 @@ exports.forgotpassword = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if(!user) {
-        console.log("email", email);
-        return next(
-            ErrHandle("Not found email matched",400, res)
-            )
+        res.status(400).json({
+            message: 'Not found email match.'
+        })
     }
 //    const resetToken = user.getResetToken();
    const resetToken = crypto.randomBytes(20).toString("hex");
