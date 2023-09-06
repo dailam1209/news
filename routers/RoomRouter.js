@@ -3,7 +3,7 @@ const router = express.Router();
 const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth");
 
 
-const {createRoom } = require("../controllers/RoomIdCOntroller");
+const {createRoom } = require("../controllers/RoomIdController");
 
 
 router.route("/create-room").post(createRoom);
