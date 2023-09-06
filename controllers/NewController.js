@@ -1,4 +1,4 @@
-const New = require("../models/NewModel");
+const New = require("../models/NewModule");
 
 exports.add = async (req, res) => {
     try {

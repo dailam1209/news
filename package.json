@@ -13,15 +13,27 @@
   "author": "dailam",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.4.0",
     "babel": "^6.23.0",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
+    "cloudinary": "^1.40.0",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^16.3.1",
     "ejs": "^3.1.9",
     "express": "^4.18.2",
+    "http": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.1",
     "mongoose": "^7.4.3",
+    "multer": "^1.4.5-lts.1",
+    "multer-cloud-storage": "^3.1.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^6.9.4",
     "nodemon": "^3.0.1",
-    "react-scripts": "^3.4.1"
+    "react-scripts": "^3.4.1",
+    "socket.io": "^4.7.2"
   },
   "engines": {
     "node": ">=14.20.1"
