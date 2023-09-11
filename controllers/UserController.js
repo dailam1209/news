@@ -312,7 +312,7 @@ exports.updateProfile = async (req, res) => {
           email: email,
           image: req.file.path
         };
-        const newUser  = await User.findByIdAndUpdate(req.user._id, newuserData, {
+        await User.findByIdAndUpdate(req.user._id, newuserData, {
           new: true,
           runValidators: true,
           userFindAndModify: false
@@ -321,7 +321,7 @@ exports.updateProfile = async (req, res) => {
       await res.json({
         success: true,
         message: `${user.name} have updated.`,
-        newUser
+        user
       });
     }
   } catch (err) {
