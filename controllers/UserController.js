@@ -302,7 +302,7 @@ exports.updatePassword = async (req, res, next) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email } = req.body;
+    const { name, email, phone } = req.body;
 
     if (req.file && id) {
       const user = await User.find({ id: id });
@@ -310,18 +310,20 @@ exports.updateProfile = async (req, res) => {
         const newuserData = {
           name: name,
           email: email,
-          image: req.file.path
+          image: req.file.path,
+          phone: phone
         };
-        await User.findByIdAndUpdate(req.user._id, newuserData, {
+        await User.findByIdAndUpdate({_id: id}, newuserData, {
           new: true,
           runValidators: true,
           userFindAndModify: false
         });
       }
+      const userUpdate = await User.find({ _id: id });
       await res.json({
         success: true,
         message: `${user.name} have updated.`,
-        user: user
+        user: userUpdate
       });
     }
   } catch (err) {
