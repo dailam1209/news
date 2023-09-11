@@ -56,7 +56,7 @@ app.get('/', function(req, res) {
 });
 
 app.use("/api", newApi);
-app.use('upload', parser.single('avatar'), userApi);
+app.use('/upload', parser.single('avatar'), userApi);
 app.use('', userApi);
 app.use("/api", roomApi);
 app.use('/api', messageAPi);
