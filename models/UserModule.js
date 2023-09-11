@@ -10,6 +10,7 @@ const UserSchema = mongoose.Schema({
     email: { type: String, require: true},
     image: { type: String, require: false},
     password: { type: String, require: true},
+    phone: { type: String, require: false},
     code: {type: String, require: false, default: ""},
     refreshToken: { type: String, require: true},
     resetPasswordTime: {
