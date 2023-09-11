@@ -321,7 +321,7 @@ exports.updateProfile = async (req, res) => {
       await res.json({
         success: true,
         message: `${user.name} have updated.`,
-        user
+        user: user
       });
     }
   } catch (err) {
