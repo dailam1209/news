@@ -12,7 +12,8 @@ const {
     checkEmail,
     deleteCode,
     updatePassword, 
-    updateProfile
+    updateProfile,
+    refreshAccessToken
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);
@@ -25,5 +26,6 @@ router.route("/update-password").post( updatePassword);
 router.route("/check-email").post( checkEmail);
 router.route("/delete-code").post( deleteCode);
 router.route("/update/:id").put( isAuthenticatedUser, updateProfile);
+router.route("/refresh-token").post(refreshAccessToken);
 
 module.exports = router;

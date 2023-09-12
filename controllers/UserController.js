@@ -5,6 +5,7 @@ const sendEmail = require("../untils/sendEmail");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const gennerCode = require("../untils/genercode");
+const jwt = require("jsonwebtoken");
 
 // register
 exports.register = async (req, res) => {
@@ -333,3 +334,30 @@ exports.updateProfile = async (req, res) => {
     });
   }
 };
+
+exports.refreshAccessToken = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if(refreshToken == null ) {
+    return res.status(403).json({ message: "RefreshToken is required" })
+  } 
+  
+  try {
+    let findUser = await User.find({ refreshToken: refreshToken});
+    if(!findUser) {
+      res.status(403).json({ message: "RefreshToken is not in database!"});
+      return;
+    }
+    // const decoded = jwt.veryfy(refreshToken, process.env.JWT_SECRET_KEY_REFRESH_TOKEN)l;
+    let newAccessToken =  jwt.sign({ id: findUser._id }, process.env.JWT_SECRET_KEY, {
+      expiresIn: '14m'
+    });
+
+    return res.status(200).json({
+      accessToken: newAccessToken,
+      refreshToken: refreshToken
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error})
+  }
+}

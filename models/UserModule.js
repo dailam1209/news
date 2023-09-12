@@ -48,7 +48,7 @@ UserSchema.methods.getJwtToken =  function (id) {
 
     return jwt.sign({ id: id}, process.env.JWT_SECRET_KEY, {
         expiresIn: process.env.JWT_EXPIRES,
-        expiresIn: "14m" 
+        expiresIn: "1m" 
     });
 };
 
