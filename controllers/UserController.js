@@ -6,7 +6,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const gennerCode = require("../untils/genercode");
 const jwt = require("jsonwebtoken");
-const Message = require ('../models/MessageModule');
+const Message = require("../models/MessageModule");
 
 // register
 exports.register = async (req, res) => {
@@ -315,7 +315,7 @@ exports.updateProfile = async (req, res) => {
           image: req.file.path,
           phone: phone
         };
-        await User.findByIdAndUpdate({_id: id}, newuserData, {
+        await User.findByIdAndUpdate({ _id: id }, newuserData, {
           new: true,
           runValidators: true,
           userFindAndModify: false
@@ -339,65 +339,79 @@ exports.updateProfile = async (req, res) => {
 exports.refreshAccessToken = async (req, res) => {
   const { refreshToken } = req.body;
 
-  if(refreshToken == null ) {
-    return res.status(403).json({ message: "RefreshToken is required" })
-  } 
-  
+  if (refreshToken == null) {
+    return res.status(403).json({ message: "RefreshToken is required" });
+  }
+
   try {
-    let findUser = await User.find({ refreshToken: refreshToken});
-    if(!findUser) {
-      res.status(403).json({ message: "RefreshToken is not in database!"});
+    let findUser = await User.find({ refreshToken: refreshToken });
+    if (!findUser) {
+      res.status(403).json({ message: "RefreshToken is not in database!" });
       return;
     }
     // const decoded = jwt.veryfy(refreshToken, process.env.JWT_SECRET_KEY_REFRESH_TOKEN)l;
-    let newAccessToken =  jwt.sign({ id: findUser._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: '14m'
-    });
+    let newAccessToken = jwt.sign(
+      { id: findUser._id },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: "14m"
+      }
+    );
 
     return res.status(200).json({
       accessToken: newAccessToken,
       refreshToken: refreshToken
     });
   } catch (error) {
-    return res.status(500).json({ message: error})
+    return res.status(500).json({ message: error });
   }
 };
 
 // get alluser include same username
 exports.getAlluserSameName = async (req, res) => {
   const queryName = req.query.name;
- try {
-  const userFind =await User.find();
-  const listResult = [];
-  await userFind.filter( user => {
-    if(user.username.indexOf(queryName) !== -1 || user.email.indexOf(queryName) !== -1) {
-      const usersFriend = user.friend;
-      console.log('usersFriend', usersFriend);
-      if(usersFriend.length > 0) {
-        usersFriend.map((id) => {
-          if(user._id == id) {
-            listResult.push({ id: user._id, username: user.username, image: user.image ? user.image : '', email: user.email, isFriend: true});
-          } else {
-            listResult.push({ id: user._id, username: user.username, image: user.image ? user.image : '', email: user.email, isFriend: false});
-          }
-        })
-      } else {
-        listResult.push({id: user._id, username: user.username, image: user.image ? user.image : '', email: user.email, isFriend: false});
-      }
-    }
-  })
+  try {
+    const userFind = await User.find();
+    const userCurrent  = await User.findById(req.user.id);
+    const usersFriend = await userCurrent.friend;
+    const listResult = [];
+    await userFind.filter((user) => {
+      if (
+        user.username.indexOf(queryName.trim()) !== -1 ||
+        user.email.indexOf(queryName.trim()) !== -1
+      ) {
+        const isFriendOfuser = usersFriend.indexOf(user._id) !== -1;
+        if (isFriendOfuser) {
+          listResult.push({
+            id: user._id,
+            username: user.username,
+            image: user.image ? user.image : "",
+            email: user.email,
+            isFriend: true
+          });
+        } else {
+          listResult.push({
+            id: user._id,
+            username: user.username,
+            image: user.image ? user.image : "",
+            email: user.email,
+            isFriend: false
+          });
+        }
+        }
+    });
 
-  res.status(200).json({
-    success: true,
-    message: 'Get same username',
-    users: listResult
-  })
- } catch (error) {
-  res.status(500).json({
-    success: false,
-    message: error.message
-  })
- }
+    res.status(200).json({
+      success: true,
+      message: "Get same username",
+      users: listResult
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
 };
 
 // get chats of user
@@ -423,7 +437,7 @@ exports.getChats = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      lastResults,
+      lastResults
     });
   } catch (error) {
     res.status(500).json({
@@ -436,12 +450,11 @@ exports.getChats = async (req, res) => {
 exports.getChatUser = async (req, res) => {
   try {
     const { idRoom } = req.params;
-    const listMessage = await Message.find({ roomId : idRoom});
-
+    const listMessage = await Message.find({ roomId: idRoom });
 
     res.status(200).json({
       success: true,
-      listMessage,
+      listMessage
     });
   } catch (error) {
     res.status(500).json({
@@ -451,100 +464,95 @@ exports.getChatUser = async (req, res) => {
   }
 };
 
-
 // add frined
 exports.addFriend = async (req, res) => {
   // id user want add
   const { userAdd } = req.params;
- try {
-  if(userAdd) {
-    // save user want add friend to show friend know 
-      await User.findByIdAndUpdate( userAdd, {
-        $push: { friendRequest: req.user.id ,
-                  },
-       })
-       // save requset of me all user me added friend
-       await User.findByIdAndUpdate( req.user.id, {
-        $push: {  sentFriendRequest : userAdd  },
-       })
+  try {
+    if (userAdd) {
+      // save user want add friend to show friend know
+      await User.findByIdAndUpdate(userAdd, {
+        $push: { friendRequest: req.user.id }
+      });
+      // save requset of me all user me added friend
+      await User.findByIdAndUpdate(req.user.id, {
+        $push: { sentFriendRequest: userAdd }
+      });
       res.status(200).json({
         success: true,
-        message: 'You send friendRequest success'
-      }) 
-  } else {
-    res.status(401).json({
+        message: "You send friendRequest success"
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        message: "Not find user match with id in database."
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Not find user match with id in database.'
-    })
+      message: error.message
+    });
   }
- } catch (error) {
-  res.status(500).json({
-    success: false,
-    message: error.message
-  })
- }
 };
-
 
 // remove friend
 exports.removeFriend = async (req, res) => {
   const { userRemove } = req.params;
- try {
-  if(userRemove) {
-    // save user want add friend to show friend know 
-    await User.findByIdAndUpdate( userRemove, {
-      $pull: { sentFriendRequest: req.user.id ,
-                },
-     })
-     // save requset of me all user me added friend
-     await User.findByIdAndUpdate( req.user.id, {
-      $pull: {  friendRequest: userRemove  },
-     })
+  try {
+    if (userRemove) {
+      // save user want add friend to show friend know
+      await User.findByIdAndUpdate(userRemove, {
+        $pull: { sentFriendRequest: req.user.id }
+      });
+      // save requset of me all user me added friend
+      await User.findByIdAndUpdate(req.user.id, {
+        $pull: { friendRequest: userRemove }
+      });
       res.status(200).json({
         success: true,
-        message: 'You send remove friendRequest success'
-      }) 
-  } else {
-    res.status(401).json({
+        message: "You send remove friendRequest success"
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        message: "Not find user match with id in database."
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Not find user match with id in database.'
-    })
+      message: error.message
+    });
   }
- } catch (error) {
-  res.status(500).json({
-    success: false,
-    message: error.message
-  })
- }
-}
+};
 
 // accept friend
 exports.acceptRequestFriend = async (req, res) => {
   const { idUserRequest } = req.params;
   console.log(idUserRequest);
   try {
-    if(!idUserRequest) {
+    if (!idUserRequest) {
       res.status(400).json({
         success: false,
         message: `Not find id:${idUserRequest} match.`
-      })
-      return ;
+      });
+      return;
     }
     await User.findByIdAndUpdate(req.user.id, {
-      $push: { friend: idUserRequest}
-    })
+      $push: { friend: idUserRequest }
+    });
     await User.findByIdAndUpdate(idUserRequest, {
-      $pull: { friendRequest: idUserRequest}
-    })
+      $pull: { friendRequest: idUserRequest }
+    });
     res.status(200).json({
       success: true,
-      message: 'Accept successfull.'
-    })
+      message: "Accept successfull."
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message
-    })
+    });
   }
-}
-
+};
