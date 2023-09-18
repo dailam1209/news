@@ -8,6 +8,8 @@ const cros = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 
+const Message = require("./models/MessageModule")
+
 const io = socketIo(server); 
 
 // upload image
@@ -59,7 +61,48 @@ app.use("/api", newApi);
 app.use('/upload', parser.single('avatar'), userApi);
 app.use('', userApi);
 app.use("/api", roomApi);
-app.use('/api', messageAPi);
+app.use('/api/add-message',parser.single('avatar'), async (req, res) => {
+    const { message, roomId, receiver_id, sender_id  } = req.body;
+    console.log(message, roomId, receiver_id, sender_id);
+    try{
+        if(message && receiver_id && sender_id && roomId) {
+            // Xử lý kết nối từ máy khách
+            io.on('connection', (socket) => {
+                // Xử lý sự kiện khi có tin nhắn mới
+                socket.on( roomId, (message) => {
+                // Lưu tin nhắn vào cơ sở dữ liệu
+                // Gửi tin nhắn đến các máy khách trong phòng chat
+                io.to(roomId).emit('message', message);
+            });
+        });
+        console.log("req.file.path", req.file.path);
+        await Message.create({
+            sender_id: sender_id,
+            receiver_id: receiver_id,
+            roomId: roomId,
+            message: message,
+            image: req?.file?.path,
+            status: 'accepted'
+        })
+
+        res.status(200).json({
+            success: true,
+            message: 'Send message successfully!',
+            status: 'accepted'
+        })
+        }
+    }
+         catch (err) {
+            // socket.emit('messageError', { message: 'Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.' });
+            res.status(500).json({
+                success: false,
+                message: err.message,
+                status: 'rejected'
+            })
+    }
+});
+app.use("/api", messageAPi);
+
 
 server.listen( process.env.PORT, () => {
     console.log(` Listenning to port ${process.env.PORT}`);

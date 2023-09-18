@@ -13,6 +13,15 @@ const UserSchema = mongoose.Schema({
     phone: { type: String, require: false},
     code: {type: String, require: false, default: ""},
     refreshToken: { type: String, require: true},
+    roomId: [
+       { type: mongoose.Schema.Types.ObjectId, require: false}],
+    friendRequest: [{ type: mongoose.Schema.Types.ObjectId, ref: "User"}],
+    friend: [{
+        type: mongoose.Schema.Types.ObjectId, ref: "User"
+    }],
+    sentFriendRequest: [{
+        type: mongoose.Schema.Types.ObjectId, ref: "User"
+    }],
     resetPasswordTime: {
         type: Date,
         required: false,
@@ -48,7 +57,7 @@ UserSchema.methods.getJwtToken =  function (id) {
 
     return jwt.sign({ id: id}, process.env.JWT_SECRET_KEY, {
         expiresIn: process.env.JWT_EXPIRES,
-        expiresIn: "1m" 
+        expiresIn: "1d" 
     });
 };
 

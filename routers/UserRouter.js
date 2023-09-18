@@ -13,7 +13,12 @@ const {
     deleteCode,
     updatePassword, 
     updateProfile,
-    refreshAccessToken
+    refreshAccessToken,
+    getAlluserSameName,
+    getChats,
+    getChatUser,
+    addFriend,
+    removeFriend
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);
@@ -27,5 +32,10 @@ router.route("/check-email").post( checkEmail);
 router.route("/delete-code").post( deleteCode);
 router.route("/update/:id").put( isAuthenticatedUser, updateProfile);
 router.route("/refresh-token").post(refreshAccessToken);
+router.route("/search").get( isAuthenticatedUser, getAlluserSameName);
+router.route("/get-chats").get( isAuthenticatedUser, getChats);
+router.route("/get-chat/:idRoom").get( isAuthenticatedUser, getChatUser);
+router.route("/add-friend/:userAdd").post( isAuthenticatedUser, addFriend);
+router.route("/remove-friend/:userRemove").post( isAuthenticatedUser, removeFriend);
 
 module.exports = router;

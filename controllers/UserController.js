@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const gennerCode = require("../untils/genercode");
 const jwt = require("jsonwebtoken");
+const Message = require ('../models/MessageModule');
 
 // register
 exports.register = async (req, res) => {
@@ -360,4 +361,148 @@ exports.refreshAccessToken = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ message: error})
   }
+};
+
+// get alluser include same username
+exports.getAlluserSameName = async (req, res) => {
+  const queryName = req.query.name;
+ try {
+  const userFind =await User.find();
+  const listResult = [];
+  await userFind.filter( user => {
+    if(user.username.indexOf(queryName) !== -1 || user.email.indexOf(queryName) !== -1) {
+      listResult.push({ username: user.username, image: user.image, email: user.email});
+    }
+  })
+
+  res.status(200).json({
+    success: true,
+    message: 'Get same username',
+    users: listResult
+  })
+ } catch (error) {
+  res.status(500).json({
+    success: false,
+    message: error.message
+  })
+ }
+};
+
+// get chats of user
+exports.getChats = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const listRoom = user.roomId;
+    const lastResults = await Promise.all(
+      listRoom.map(async (value) => {
+        const findAllMessage = await Message.find({ roomId: value });
+        const length = findAllMessage.length;
+        const last = length > 0 ? findAllMessage[length - 1] : null;
+        return last;
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      lastResults,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.getChatUser = async (req, res) => {
+  try {
+    const { idRoom } = req.params;
+    const listMessage = await Message.find({ roomId : idRoom});
+
+
+    res.status(200).json({
+      success: true,
+      listMessage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// add frined
+exports.addFriend = async (req, res) => {
+  const { userAdd } = req.params;
+  console.log(userAdd);
+ try {
+  if(userAdd) {
+    // save user want add friend to show friend know 
+      await User.findByIdAndUpdate( userAdd, {
+        $push: { sentFriendRequest: req.user.id ,
+                  },
+       })
+       // save requset of me all user me added friend
+       await User.findByIdAndUpdate( userAdd, {
+        $push: {  friendRequest: userAdd  },
+       })
+      res.status(200).json({
+        success: true,
+        message: 'You send friendRequest success'
+      }) 
+  } else {
+    res.status(401).json({
+      success: false,
+      message: 'Not find user match with id in database.'
+    })
+  }
+ } catch (error) {
+  res.status(500).json({
+    success: false,
+    message: error.message
+  })
+ }
+};
+
+
+// remove friend
+exports.removeFriend = async (req, res) => {
+  const { userRemove } = req.params;
+ try {
+  if(userRemove) {
+    // save user want add friend to show friend know 
+    await User.findByIdAndUpdate( userRemove, {
+      $pull: { sentFriendRequest: req.user.id ,
+                },
+     })
+     // save requset of me all user me added friend
+     await User.findByIdAndUpdate( req.user.id, {
+      $pull: {  friendRequest: userRemove  },
+     })
+      res.status(200).json({
+        success: true,
+        message: 'You send remove friendRequest success'
+      }) 
+  } else {
+    res.status(401).json({
+      success: false,
+      message: 'Not find user match with id in database.'
+    })
+  }
+ } catch (error) {
+  res.status(500).json({
+    success: false,
+    message: error.message
+  })
+ }
 }
+

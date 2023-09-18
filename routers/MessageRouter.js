@@ -3,9 +3,8 @@ const router = express.Router();
 const { isAuthenticatedUser, authorizeRoles } = require("../middleware/auth");
 
 
-const { createRoom, addMessage } = require("../controllers/MessageController");
+const { getAllUserChat, get } = require("../controllers/MessageController");
 
-router.route("/create-room").post(isAuthenticatedUser, createRoom);
-router.route("/add-message").post(isAuthenticatedUser, addMessage);
+router.route("/getuser-chat/:id").post(isAuthenticatedUser, getAllUserChat);
 
 module.exports = router;
