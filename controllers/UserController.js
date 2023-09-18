@@ -371,7 +371,19 @@ exports.getAlluserSameName = async (req, res) => {
   const listResult = [];
   await userFind.filter( user => {
     if(user.username.indexOf(queryName) !== -1 || user.email.indexOf(queryName) !== -1) {
-      listResult.push({ username: user.username, image: user.image, email: user.email});
+      const usersFriend = user.friend;
+      console.log('usersFriend', usersFriend);
+      if(usersFriend.length > 0) {
+        usersFriend.map((id) => {
+          if(user._id == id) {
+            listResult.push({ id: user._id, username: user.username, image: user.image ? user.image : '', email: user.email, isFriend: true});
+          } else {
+            listResult.push({ id: user._id, username: user.username, image: user.image ? user.image : '', email: user.email, isFriend: false});
+          }
+        })
+      } else {
+        listResult.push({id: user._id, username: user.username, image: user.image ? user.image : '', email: user.email, isFriend: false});
+      }
     }
   })
 
@@ -442,18 +454,18 @@ exports.getChatUser = async (req, res) => {
 
 // add frined
 exports.addFriend = async (req, res) => {
+  // id user want add
   const { userAdd } = req.params;
-  console.log(userAdd);
  try {
   if(userAdd) {
     // save user want add friend to show friend know 
       await User.findByIdAndUpdate( userAdd, {
-        $push: { sentFriendRequest: req.user.id ,
+        $push: { friendRequest: req.user.id ,
                   },
        })
        // save requset of me all user me added friend
-       await User.findByIdAndUpdate( userAdd, {
-        $push: {  friendRequest: userAdd  },
+       await User.findByIdAndUpdate( req.user.id, {
+        $push: {  sentFriendRequest : userAdd  },
        })
       res.status(200).json({
         success: true,
@@ -504,5 +516,35 @@ exports.removeFriend = async (req, res) => {
     message: error.message
   })
  }
+}
+
+// accept friend
+exports.acceptRequestFriend = async (req, res) => {
+  const { idUserRequest } = req.params;
+  console.log(idUserRequest);
+  try {
+    if(!idUserRequest) {
+      res.status(400).json({
+        success: false,
+        message: `Not find id:${idUserRequest} match.`
+      })
+      return ;
+    }
+    await User.findByIdAndUpdate(req.user.id, {
+      $push: { friend: idUserRequest}
+    })
+    await User.findByIdAndUpdate(idUserRequest, {
+      $pull: { friendRequest: idUserRequest}
+    })
+    res.status(200).json({
+      success: true,
+      message: 'Accept successfull.'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
 }
 

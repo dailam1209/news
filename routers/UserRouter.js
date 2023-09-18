@@ -18,7 +18,8 @@ const {
     getChats,
     getChatUser,
     addFriend,
-    removeFriend
+    removeFriend,
+    acceptRequestFriend
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);
@@ -37,5 +38,7 @@ router.route("/get-chats").get( isAuthenticatedUser, getChats);
 router.route("/get-chat/:idRoom").get( isAuthenticatedUser, getChatUser);
 router.route("/add-friend/:userAdd").post( isAuthenticatedUser, addFriend);
 router.route("/remove-friend/:userRemove").post( isAuthenticatedUser, removeFriend);
+router.route("/accept-friend/:idUserRequest").post( isAuthenticatedUser, acceptRequestFriend);
+
 
 module.exports = router;
