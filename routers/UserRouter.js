@@ -14,12 +14,12 @@ const {
     updatePassword, 
     updateProfile,
     refreshAccessToken,
-    getAlluserSameName,
     getChats,
     getChatUser,
     addFriend,
     removeFriend,
-    acceptRequestFriend
+    acceptRequestFriend,
+    getAlluserSameName
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);

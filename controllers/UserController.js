@@ -368,48 +368,88 @@ exports.refreshAccessToken = async (req, res) => {
 };
 
 // get alluser include same username
+// exports.getAlluserSameName = async (req, res) => {
+//   const queryName = req.query.name;
+//   try {
+//     const userFind = await User.find();
+//     const userCurrent  = await User.findById(req.user.id);
+//     const usersFriend = await userCurrent.friend;
+//     const listResult = [];
+//     await userFind.filter((user) => {
+//       if (
+//         user.username.indexOf(queryName.trim()) !== -1 ||
+//         user.email.indexOf(queryName.trim()) !== -1
+//       ) {
+//         const isFriendOfuser = usersFriend.indexOf(user._id) !== -1;
+//         if (isFriendOfuser) {
+//           listResult.push({
+//             id: user._id,
+//             username: user.username,
+//             image: user.image ? user.image : "",
+//             email: user.email,
+//             isFriend: true
+//           });
+//         } else {
+//           listResult.push({
+//             id: user._id,
+//             username: user.username,
+//             image: user.image ? user.image : "",
+//             email: user.email,
+//             isFriend: false
+//           });
+//         }
+//         }
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Get same username",
+//       users: listResult
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
 exports.getAlluserSameName = async (req, res) => {
   const queryName = req.query.name;
   try {
-    const userFind = await User.find();
-    const userCurrent  = await User.findById(req.user.id);
-    const usersFriend = await userCurrent.friend;
-    const listResult = [];
-    await userFind.filter((user) => {
-      if (
-        user.username.indexOf(queryName.trim()) !== -1 ||
-        user.email.indexOf(queryName.trim()) !== -1
-      ) {
-        const isFriendOfuser = usersFriend.indexOf(user._id) !== -1;
-        if (isFriendOfuser) {
-          listResult.push({
-            id: user._id,
-            username: user.username,
-            image: user.image ? user.image : "",
-            email: user.email,
-            isFriend: true
-          });
-        } else {
-          listResult.push({
-            id: user._id,
-            username: user.username,
-            image: user.image ? user.image : "",
-            email: user.email,
-            isFriend: false
-          });
-        }
-        }
+    // Fetch all users with username or email containing the queryName
+    const users = await User.find({
+      $or: [
+        { username: { $regex: queryName.trim(), $options: 'i' } }, // Case-insensitive search
+        { email: { $regex: queryName.trim(), $options: 'i' } },    // Case-insensitive search
+      ],
     });
+
+    // Get the IDs of the current user's friends
+    const userCurrent = await User.findById(req.user.id).select('friend');
+    const friendsIds = userCurrent.friend;
+
+    // Create a map for faster friend lookup
+    const friendsMap = new Map(friendsIds.map((id) => [id.toString(), true]));
+
+    // Prepare the list of results
+    const listResult = users.map((user) => ({
+      id: user._id,
+      username: user.username,
+      image: user.image || '',
+      email: user.email,
+      isFriend: friendsMap.has(user._id.toString()), // Check if the user is a friend
+    }));
 
     res.status(200).json({
       success: true,
-      message: "Get same username",
-      users: listResult
+      message: 'Get users with the same username or email',
+      users: listResult,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -478,6 +518,8 @@ exports.addFriend = async (req, res) => {
       await User.findByIdAndUpdate(req.user.id, {
         $push: { sentFriendRequest: userAdd }
       });
+
+      
       res.status(200).json({
         success: true,
         message: "You send friendRequest success"
@@ -541,6 +583,9 @@ exports.acceptRequestFriend = async (req, res) => {
     }
     await User.findByIdAndUpdate(req.user.id, {
       $push: { friend: idUserRequest }
+    });
+    await User.findByIdAndUpdate(idUserRequest, {
+      $push: { friend: req.user.id }
     });
     await User.findByIdAndUpdate(idUserRequest, {
       $pull: { friendRequest: idUserRequest }
