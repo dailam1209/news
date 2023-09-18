@@ -416,17 +416,23 @@ exports.refreshAccessToken = async (req, res) => {
 
 exports.getAlluserSameName = async (req, res) => {
   const queryName = req.query.name;
+  const currentUserId = req.user.id;
   try {
     // Fetch all users with username or email containing the queryName
     const users = await User.find({
-      $or: [
-        { username: { $regex: queryName.trim(), $options: 'i' } }, // Case-insensitive search
-        { email: { $regex: queryName.trim(), $options: 'i' } },    // Case-insensitive search
-      ],
+      $and: [
+        {
+          $or: [
+            { username: { $regex: queryName.trim(), $options: "i" } }, // Case-insensitive search
+            { email: { $regex: queryName.trim(), $options: "i" } } // Case-insensitive search
+          ]
+        },
+        { _id: { $ne: currentUserId } } // Exclude the current user
+      ]
     });
 
     // Get the IDs of the current user's friends
-    const userCurrent = await User.findById(req.user.id).select('friend');
+    const userCurrent = await User.findById(currentUserId).select("friend");
     const friendsIds = userCurrent.friend;
 
     // Create a map for faster friend lookup
@@ -436,20 +442,20 @@ exports.getAlluserSameName = async (req, res) => {
     const listResult = users.map((user) => ({
       id: user._id,
       username: user.username,
-      image: user.image || '',
+      image: user.image || "",
       email: user.email,
-      isFriend: friendsMap.has(user._id.toString()), // Check if the user is a friend
+      isFriend: friendsMap.has(user._id.toString()) // Check if the user is a friend
     }));
 
     res.status(200).json({
       success: true,
-      message: 'Get users with the same username or email',
-      users: listResult,
+      message: "Get users with the same username or email",
+      users: listResult
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 };
@@ -510,16 +516,23 @@ exports.addFriend = async (req, res) => {
   const { userAdd } = req.params;
   try {
     if (userAdd) {
+      const friendRequest = {
+        user: userAdd,
+        createdAt: new Date() // Set the createdAt field to the current date and time
+      };
+      const userRequest = {
+        user: req.user.id,
+        createdAt: new Date() // Set the createdAt field to the current date and time
+      };
       // save user want add friend to show friend know
       await User.findByIdAndUpdate(userAdd, {
-        $push: { friendRequest: req.user.id }
+        $push: { friendRequest: userRequest }
       });
       // save requset of me all user me added friend
       await User.findByIdAndUpdate(req.user.id, {
-        $push: { sentFriendRequest: userAdd }
+        $push: { sentFriendRequest: friendRequest }
       });
 
-      
       res.status(200).json({
         success: true,
         message: "You send friendRequest success"
@@ -545,11 +558,11 @@ exports.removeFriend = async (req, res) => {
     if (userRemove) {
       // save user want add friend to show friend know
       await User.findByIdAndUpdate(userRemove, {
-        $pull: { sentFriendRequest: req.user.id }
+        $pull: { sentFriendRequest: { user: req.user.id } }
       });
       // save requset of me all user me added friend
       await User.findByIdAndUpdate(req.user.id, {
-        $pull: { friendRequest: userRemove }
+        $pull: { friendRequest: { user: userRemove } }
       });
       res.status(200).json({
         success: true,
@@ -559,6 +572,46 @@ exports.removeFriend = async (req, res) => {
       res.status(401).json({
         success: false,
         message: "Not find user match with id in database."
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// get all user want add friend with me
+exports.getAllUserWantAdd = async (req, res) => {
+  const currentUserId = req.user.id;
+  try {
+    const user = await User.findById(currentUserId);
+    const listUserWantAddMe = await user.friendRequest;
+    const retult = [];
+    if (listUserWantAddMe.length > 0) {
+      await Promise.all(
+        listUserWantAddMe.map(async (value) => {
+          const userRequest = await User.findById(value.user);
+          const informationUser = {
+            _id: value.user,
+            username: userRequest.username,
+            email: userRequest.email,
+            image: userRequest.image ?? "",
+            createAt: value.createdAt
+          };
+          retult.push(informationUser);
+        })
+      );
+
+      res.status(200).json({
+        success: true,
+        listUserRequest: retult
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        listUserRequest: []
       });
     }
   } catch (error) {
@@ -587,13 +640,59 @@ exports.acceptRequestFriend = async (req, res) => {
     await User.findByIdAndUpdate(idUserRequest, {
       $push: { friend: req.user.id }
     });
+    
+    // user recevice
     await User.findByIdAndUpdate(idUserRequest, {
-      $pull: { friendRequest: idUserRequest }
+      $pull: { friendRequest:{ user: req.user.id }}
+    });
+    // user send
+    await User.findByIdAndUpdate(idUserRequest, {
+      $pull: { sentFriendRequest: { user: idUserRequest }}
     });
     res.status(200).json({
       success: true,
       message: "Accept successfull."
     });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// all user me sent to add friend
+exports.getAllSentOfMe = async (req, res) => {
+  const currentUserId = req.user.id;
+  try {
+    const user = await User.findById(currentUserId);
+    const listUserWantAddMe = await user.sentFriendRequest;
+    const retult = [];
+    if (listUserWantAddMe.length > 0) {
+      await Promise.all(
+        listUserWantAddMe.map(async (value) => {
+          const userRequest = await User.findById(value);
+          const informationUser = {
+            _id: value.user,
+            username: userRequest.username,
+            email: userRequest.email,
+            image: userRequest.image,
+            date: value.createdAt
+          };
+          retult.push(informationUser);
+        })
+      );
+
+      res.status(200).json({
+        success: true,
+        listUserRequest: retult
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        listUserRequest: []
+      });
+    }
   } catch (error) {
     res.status(500).json({
       success: false,
