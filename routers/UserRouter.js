@@ -39,8 +39,8 @@ router.route("/search").get( isAuthenticatedUser, getAlluserSameName);
 router.route("/get-chats").get( isAuthenticatedUser, getChats);
 router.route("/get-chat/:idRoom").get( isAuthenticatedUser, getChatUser);
 router.route("/add-friend/:userAdd").post( isAuthenticatedUser, addFriend);
-router.route("/get-all-request-add").post( isAuthenticatedUser, getAllUserWantAdd);
-router.route("/get-all-sent-add").post( isAuthenticatedUser, getAllSentOfMe);
+router.route("/get-all-request-add").get( isAuthenticatedUser, getAllUserWantAdd);
+router.route("/get-all-sent-add").get( isAuthenticatedUser, getAllSentOfMe);
 router.route("/remove-friend/:userRemove").post( isAuthenticatedUser, removeFriend);
 router.route("/accept-friend/:idUserRequest").post( isAuthenticatedUser, acceptRequestFriend);
 

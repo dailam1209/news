@@ -671,7 +671,7 @@ exports.getAllSentOfMe = async (req, res) => {
     if (listUserWantAddMe.length > 0) {
       await Promise.all(
         listUserWantAddMe.map(async (value) => {
-          const userRequest = await User.findById(value);
+          const userRequest = await User.findById(value.user);
           const informationUser = {
             _id: value.user,
             username: userRequest.username,
