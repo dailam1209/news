@@ -23,8 +23,8 @@ const UserSchema = mongoose.Schema({
   ],
   friend: [
     {
-      user: {type: mongoose.Schema.Types.ObjectId, ref: "User" ,require: true},
-      createdAt: { type: Date, require: true, default: Date.now() }
+        type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     }
   ],
   sentFriendRequest: [

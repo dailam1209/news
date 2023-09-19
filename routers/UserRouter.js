@@ -21,7 +21,8 @@ const {
     acceptRequestFriend,
     getAlluserSameName,
     getAllUserWantAdd,
-    getAllSentOfMe
+    getAllSentOfMe,
+    removeFriendWhenMeSend
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);
@@ -41,7 +42,8 @@ router.route("/get-chat/:idRoom").get( isAuthenticatedUser, getChatUser);
 router.route("/add-friend/:userAdd").post( isAuthenticatedUser, addFriend);
 router.route("/get-all-request-add").get( isAuthenticatedUser, getAllUserWantAdd);
 router.route("/get-all-sent-add").get( isAuthenticatedUser, getAllSentOfMe);
-router.route("/remove-friend/:userRemove").post( isAuthenticatedUser, removeFriend);
+router.route("/remove-friend/:userRemove").put( isAuthenticatedUser, removeFriend);
+router.route("/remove-friend-all/:userRemove").put( isAuthenticatedUser, removeFriendWhenMeSend);
 router.route("/accept-friend/:idUserRequest").post( isAuthenticatedUser, acceptRequestFriend);
 
 
