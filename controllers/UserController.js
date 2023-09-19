@@ -613,6 +613,7 @@ exports.getAllUserWantAdd = async (req, res) => {
 
 // accept friend --> unstill test UI
 exports.acceptRequestFriend = async (req, res) => {
+  // id of user want add with you
   const { idUserRequest } = req.params;
   try {
     if (!idUserRequest) {
@@ -623,7 +624,7 @@ exports.acceptRequestFriend = async (req, res) => {
       return;
     }
 
-    
+    // push friend all of 2 
     await User.findByIdAndUpdate(req.user.id, {
       $push: { friend: idUserRequest }
     });
@@ -632,11 +633,11 @@ exports.acceptRequestFriend = async (req, res) => {
     });
     
     // user recevice
-    await User.findByIdAndUpdate(req.user.id, {
+    await User.findByIdAndUpdate(idUserRequest, {
       $pull: { friendRequest:{ user: idUserRequest }}
     });
     // user send
-    await User.findByIdAndUpdate(idUserRequest, {
+    await User.findByIdAndUpdate(req.user.id, {
       $pull: { sentFriendRequest: { user: req.user.id }}
     });
     res.status(200).json({
