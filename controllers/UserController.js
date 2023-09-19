@@ -71,6 +71,29 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.isOnline = async (req, res) => {
+  const{ state }= req.body;
+  try {
+    const userId = req.user.id;
+    await User.findByIdAndUpdate(userId, { isOnline: state}, {
+      new: true,
+      runValidators: true,
+      userFindAndModify: false
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Update state online success.'
+    })
+
+  } catch (error) {
+    res.status(200).json({
+      success: false,
+      message: error.message
+    })
+  }
+
+}
+
 //logout  -> ok
 exports.logout = async (req, res, next) => {
   res.cookie("token", null, {
@@ -416,6 +439,47 @@ exports.getAlluserSameName = async (req, res) => {
     });
   }
 };
+
+exports.getAllFriend = async (req, res) => {
+  const queryName = req.query.name;
+  const currentUserId = req.user.id;
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const resultUser = [];
+    const listFriend = user.friend;
+    await Promise.all(
+      listFriend.map(async (user) => {
+        const findUser = await User.findById(user);
+        const inforUser = {
+          username: findUser.username,
+          email: findUser.email,
+          image: findUser.image,
+          id: findUser._id,
+          isOnline: findUser.isOnline
+        }
+        resultUser.push(inforUser);
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      users: resultUser
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 
 // get chats of user
 exports.getChats = async (req, res) => {

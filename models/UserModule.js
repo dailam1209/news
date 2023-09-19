@@ -11,6 +11,7 @@ const UserSchema = mongoose.Schema({
   password: { type: String, require: true },
   phone: { type: String, require: false },
   code: { type: String, require: false, default: "" },
+  isOnline: { type: Boolean, require: false, default: false},
   refreshToken: { type: String, require: true },
   roomId: [{ type: mongoose.Schema.Types.ObjectId, require: false }],
   friendRequest: [
