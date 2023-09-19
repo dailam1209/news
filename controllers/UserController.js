@@ -633,11 +633,11 @@ exports.acceptRequestFriend = async (req, res) => {
     });
     
     // user recevice
-    await User.findByIdAndUpdate(idUserRequest, {
+    await User.findByIdAndUpdate(req.user.id, {
       $pull: { friendRequest:{ user: idUserRequest }}
     });
     // user send
-    await User.findByIdAndUpdate(req.user.id, {
+    await User.findByIdAndUpdate(idUserRequest, {
       $pull: { sentFriendRequest: { user: req.user.id }}
     });
     res.status(200).json({
