@@ -441,8 +441,6 @@ exports.getAlluserSameName = async (req, res) => {
 };
 
 exports.getAllFriend = async (req, res) => {
-  const queryName = req.query.name;
-  const currentUserId = req.user.id;
   try {
     const user = await User.findById(req.user.id);
     if (!user) {

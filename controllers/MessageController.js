@@ -3,60 +3,87 @@ const Message = require("../models/MessageModule");
 const RoomId = require("../models/RoomIdModule");
 const io = require('socket.io')
 
-// post message in room
-exports.addMessage = async (req, res) => {
-    const { message, roomId, receiver_id, sender_id  } = req.body;
-    console.log(message, roomId, receiver_id, sender_id);
-    try{
-        if(message && receiver_id && sender_id && roomId) {
-            // Xử lý kết nối từ máy khách
-            io.on('connection', (socket) => {
-                // Xử lý sự kiện khi có tin nhắn mới
-                socket.on( roomId, (message) => {
-                // Lưu tin nhắn vào cơ sở dữ liệu
-                console.log("req.file.path", req.file.path);
-                Message.create({
-                    sender_id: sender_id,
-                    receiver_id: receiver_id,
-                    roomId: roomId,
-                    message: message,
-                    image: req?.file?.path
-                })
-                // Gửi tin nhắn đến các máy khách trong phòng chat
-                io.to(roomId).emit('message', message);
-                });
-            });
-        }
-    }
-         catch (err) {
-            // socket.emit('messageError', { message: 'Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.' });
-            res.status(500).json({
-                success: false,
-                message: err.message
-            })
-    }
-}
-
-// get profile user chated of customer
-exports.getAllUserChat = async (req, res) => {
-    const { id } = req.params;
+exports.createMessage = async (req, res) => {
     try {
-        if(id) {
-            const user = await User.findById(id);
-            const listRoom = await user.roomId;
-            if(listRoom) {
-                res.status(200).json({
-                    success: true,
-                    message: listRoom
-                })
-            } 
-        }
+        const { sender } = req.user.id;
+        const { reciever } =req.params;
+        const { roomId } = req.body;
+        const { text, createdAt, image, sent, received, seen, deleteAt, hiddenTo, isReply} = req.body.messages[0];
+        const { name, avatar } = req.body.messages[0].user;
 
+        const message = {
+            sender: req.user.id,
+            reciever: reciever,
+            roomId: roomId,
+            messages: [ 
+                {
+                    text: text,
+                    createdAt: createdAt,
+                    user: {
+                        _id: sender,
+                        name: name,
+                        avatar:avatar
+                    },
+                    image: image,
+                    sent: sent,
+                    received: received,
+                    seen: seen,
+                    deleteAt: deleteAt,
+                    hiddenTo: hiddenTo,
+                    isReply: isReply
+                }
+        ]
+        };
+        const exitMessage = await Message.findOne({
+            sender: req.user.id,
+            reciever: reciever,
+            roomId: roomId
+        });
+        
+        if(sender && reciever && roomId && text || image) {
+            if(exitMessage) {
+                exitMessage.messages.push(message.messages[0]);
+                await exitMessage.save();
+            } else {
+                await Message.create(message);
+                // io.on('connection', (socket) => {
+                //     socket.on( roomId, (message) => {
+                //         io.to(roomId).emit('message', message)
+                //     })
+                // })
+            }
+        }
+        res.status(200).json({
+            success: true,
+            message: 'Send message successfully.',
+            showMessage: message
+        })
     } catch (error) {
+        // socket.emit('messageError', { message: 'Have message error when send.'});
         res.status(500).json({
             success: false,
             message: error.message
         })
     }
 };
+
+exports.updateMessage = async (req, res) => {
+    
+    try {
+        const { idMessage } = req.params;
+        const message = await Message.findById(idMessage);
+        if(message) {
+            await Message.findByIdAndUpdate(idMessage, req.body);
+        }
+        res.status(200).json({
+            success: true,
+            message: `Update message of ${idMessage} successfully.`
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
+}
 
