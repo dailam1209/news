@@ -1,6 +1,10 @@
 const express = require("express");
 const http = require("http");
-const socketIo = require("socket.io");
+const socketIo = require("socket.io")(Http, {
+  cors: {
+    origin: "*",
+  },
+});;
 const app = express();
 const server = http.createServer(app);
 const bodyParser = require("body-parser");
