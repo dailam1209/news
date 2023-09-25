@@ -20,7 +20,7 @@ exports.createMessage = async (req, res) => {
                     text: text,
                     createdAt: createdAt,
                     user: {
-                        _id: sender,
+                        id: sender,
                         name: name,
                         avatar:avatar
                     },
@@ -39,25 +39,25 @@ exports.createMessage = async (req, res) => {
             reciever: reciever,
             roomId: roomId
         });
-        
-        if(sender && reciever && roomId && text || image) {
-            if(exitMessage) {
-                exitMessage.messages.push(message.messages[0]);
-                await exitMessage.save();
-            } else {
-                await Message.create(message);
-                // io.on('connection', (socket) => {
-                //     socket.on( roomId, (message) => {
-                //         io.to(roomId).emit('message', message)
-                //     })
-                // })
-            }
+        console.log(sender && reciever && roomId && text || sender && reciever && roomId && image);
+        if(!exitMessage) {
+            await Message.create(message);
+            res.status(200).json({
+                success: true,
+                message: 'Send message successfully.',
+                showMessage: message
+            })
+        } else {
+            exitMessage.messages.push(message.messages[0]);
+            await exitMessage.save();
+            res.status(200).json({
+                success: true,
+                message: 'Update message.',
+            })
         }
-        res.status(200).json({
-            success: true,
-            message: 'Send message successfully.',
-            showMessage: message
-        })
+        
+        
+        
     } catch (error) {
         // socket.emit('messageError', { message: 'Have message error when send.'});
         res.status(500).json({
@@ -79,6 +79,52 @@ exports.updateMessage = async (req, res) => {
             success: true,
             message: `Update message of ${idMessage} successfully.`
         })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+exports.getUrl = async (req, res) => {
+    try {
+        console.log('url', req.file);
+        if(req.file) {
+            res.status(200).json({
+                success: true,
+                image: req.file.path
+            })
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+
+// get all message of room one
+exports.getAllMessageOfRoom = async (req, res) => {
+    try {
+        const { sender, reciever, roomId } = req.body;
+    const messages1 = await Message.find({
+        sender: sender,
+        reciever: reciever,
+        roomId: roomId
+    });
+    const messages2 = await Message.find({
+        sender: reciever,
+        reciever:sender ,
+        roomId: roomId
+    });
+    if(messages1 || messages2 ) {
+        res.status(200).json({
+            success: true,
+            listMessage: messages1 ? messages1 : messages2
+        })
+    }
     } catch (error) {
         res.status(500).json({
             success: false,

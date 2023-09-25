@@ -40,7 +40,7 @@ router.route("/delete-code").post( deleteCode);
 router.route("/update/:id").put( isAuthenticatedUser, updateProfile);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/search").get( isAuthenticatedUser, getAlluserSameName);
-router.route("/friend").get( isAuthenticatedUser, getAllFriend);
+router.route("/friend/:id").get( isAuthenticatedUser, getAllFriend);
 router.route("/get-chats").get( isAuthenticatedUser, getChats);
 router.route("/get-chat/:idRoom").get( isAuthenticatedUser, getChatUser);
 router.route("/add-friend/:userAdd").post( isAuthenticatedUser, addFriend);

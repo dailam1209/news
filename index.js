@@ -7,6 +7,7 @@ const bodyParser = require("body-parser");
 const cros = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
+const { userJoinGroup, getCurrentUserDetails, userLeaveGroup } = require('./untils/userSocket')
 
 const Message = require("./models/MessageModule");
 const { isAuthenticatedUser, authorizeRoles } = require("./middleware/auth");
@@ -61,23 +62,26 @@ app.get("/", function (req, res) {
 
 app.use("/api", newApi);
 app.use("/upload", parser.single("avatar"), userApi);
+app.use("/api", parser.single("url"), messageAPi );
 app.use("", userApi);
 app.use("/api", roomApi);
 app.use("/api", messageAPi);
 
 const users = [];
-
 io.on("connection", function (socket) {
-  socket.on("disconnect", function () {});
-
-  //server lắng nghe dữ liệu từ client
-
+  socket.on("connected", function (userId){
+    users[userId] = socket.id;
+    console.log('users', users);
+  })
   socket.on("Client-sent-data", function (data) {
+    console.log('data', data);
     //sau khi lắng nghe dữ liệu, server phát lại dữ liệu này đến các client khác
-
-    socket.emit(data.room, data);
+    socket.to(users[data.receverId]).emit('messageRecever', data);
   });
+
+  
 });
+
 
 server.listen(process.env.PORT, () => {
   console.log(` Listenning to port ${process.env.PORT}`);

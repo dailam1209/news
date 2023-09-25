@@ -72,27 +72,29 @@ exports.login = async (req, res) => {
 };
 
 exports.isOnline = async (req, res) => {
-  const{ state }= req.body;
+  const { state } = req.body;
   try {
     const userId = req.user.id;
-    await User.findByIdAndUpdate(userId, { isOnline: state}, {
-      new: true,
-      runValidators: true,
-      userFindAndModify: false
-    });
+    await User.findByIdAndUpdate(
+      userId,
+      { isOnline: state },
+      {
+        new: true,
+        runValidators: true,
+        userFindAndModify: false
+      }
+    );
     res.status(200).json({
       success: true,
-      message: 'Update state online success.'
-    })
-
+      message: "Update state online success."
+    });
   } catch (error) {
     res.status(200).json({
       success: false,
       message: error.message
-    })
+    });
   }
-
-}
+};
 
 //logout  -> ok
 exports.logout = async (req, res, next) => {
@@ -369,7 +371,7 @@ exports.refreshAccessToken = async (req, res) => {
   }
 
   try {
-    let findUser = await User.find({ refreshToken: refreshToken });
+    let findUser = await User.findOne({ refreshToken: refreshToken });
     if (!findUser) {
       res.status(403).json({ message: "RefreshToken is not in database!" });
       return;
@@ -391,7 +393,6 @@ exports.refreshAccessToken = async (req, res) => {
     return res.status(500).json({ message: error });
   }
 };
-
 
 // get all user include same text search -> ok
 exports.getAlluserSameName = async (req, res) => {
@@ -442,7 +443,8 @@ exports.getAlluserSameName = async (req, res) => {
 
 exports.getAllFriend = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const { id } = req.params;
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -450,25 +452,37 @@ exports.getAllFriend = async (req, res) => {
       });
     }
 
-    const resultUser = [];
+    // const resultUser = [];
     const listFriend = user.friend;
-    await Promise.all(
-      listFriend.map(async (user) => {
-        const findUser = await User.findById(user);
-        const inforUser = {
-          username: findUser.username,
-          email: findUser.email,
-          image: findUser.image,
-          id: findUser._id,
-          isOnline: findUser.isOnline
-        }
-        resultUser.push(inforUser);
-      })
-    );
+
+    const resultUser = await User.find({ _id: { $in: listFriend } });
+
+    // Format lại dữ liệu nếu cần
+    const formattedUsers = resultUser.map((findUser) => ({
+      username: findUser.username,
+      email: findUser.email,
+      image: findUser.image,
+      id: findUser._id,
+      isOnline: findUser.isOnline
+    }));
+
+    // await Promise.all(
+    //   listFriend.map( async (user) => {
+    //     let findUser = await User.findById(user);
+    //     let inforUser = {
+    //       username: findUser.username,
+    //       email: findUser.email,
+    //       image: findUser.image,
+    //       id: findUser._id,
+    //       isOnline: findUser.isOnline
+    //     }
+    //     resultUser.push(inforUser);
+    //   })
+    // );
 
     res.status(200).json({
       success: true,
-      users: resultUser
+      users: formattedUsers
     });
   } catch (error) {
     res.status(500).json({
@@ -478,8 +492,56 @@ exports.getAllFriend = async (req, res) => {
   }
 };
 
+// get chats of user -> get last all message
+// exports.getChats = async (req, res) => {
+//   try {
+//     const user = await User.findById(req.user.id);
+//     if (!user) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found"
+//       });
+//     }
 
-// get chats of user
+//     const lastMessageAll = [];
+//     const listRoom = user.roomId;
+//     await Promise.all(
+//       await listRoom.map(async (value) => {
+//         const findAllMessage = await Message.find({ roomId: value });
+//         findAllMessage.map(async (item) => {
+//           const userFind = item.sender == req.user.id ? item.reciever : item.sender;
+//           const getUser = await User.findById(userFind);
+//           const messages = item.messages;
+//           if (messages.length > 0) {
+//             const lastMessage = messages[messages.length - 1];
+//             const filterMessage = 
+//               {
+//                 roomId: item.roomId,
+//                 sender: item.render,
+//                 reciever: item.reciever,
+//                 text: lastMessage.text,
+//                 isOnline: getUser?.isOnline,
+//                 createAt: item.createAt
+//               }
+//             lastMessageAll.push(filterMessage);
+//             console.log(filterMessage);
+//           }
+//         });
+//       })
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       lastMessageAll
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
 exports.getChats = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -490,19 +552,39 @@ exports.getChats = async (req, res) => {
       });
     }
 
+    const lastMessageAll = [];
     const listRoom = user.roomId;
-    const lastResults = await Promise.all(
-      listRoom.map(async (value) => {
-        const findAllMessage = await Message.find({ roomId: value });
-        const length = findAllMessage.length;
-        const last = length > 0 ? findAllMessage[length - 1] : null;
-        return last;
-      })
-    );
+
+    // Tạo mảng các promise cho việc lấy thông tin các phòng chat
+    const roomPromises = listRoom.map(async (value) => {
+      const findAllMessage = await Message.find({ roomId: value });
+      if (findAllMessage.length > 0) {
+        const lastMessage = findAllMessage[findAllMessage.length - 1];
+        const userFind = lastMessage.sender == req.user.id ? lastMessage.reciever : lastMessage.sender;
+        const getUser = await User.findById(userFind);
+
+        const filterMessage = {
+          roomId: lastMessage.roomId,
+          sender: lastMessage.sender,
+          reciever: lastMessage.reciever,
+          text: lastMessage.messages[lastMessage.messages.length - 1].text,
+          isOnline: getUser?.isOnline,
+          image: getUser.image,
+          username: getUser.username,
+          idSender: lastMessage.messages.user ? lastMessage.messages.user : '' ,
+          createAt: lastMessage.createAt
+        };
+
+        lastMessageAll.push(filterMessage);
+      }
+    });
+
+    // Đợi tất cả các promise hoàn thành trước khi trả kết quả
+    await Promise.all(roomPromises);
 
     res.status(200).json({
       success: true,
-      lastResults
+      lastMessageAll
     });
   } catch (error) {
     res.status(500).json({
@@ -601,7 +683,7 @@ exports.removeFriend = async (req, res) => {
   }
 };
 
-// not want add friend with you(when you still not accept with me) or not accept you(when be have friend) 
+// not want add friend with you(when you still not accept with me) or not accept you(when be have friend)
 // -> ok
 exports.removeFriendWhenMeSend = async (req, res) => {
   const { userRemove } = req.params;
@@ -686,21 +768,21 @@ exports.acceptRequestFriend = async (req, res) => {
       return;
     }
 
-    // push friend all of 2 
+    // push friend all of 2
     await User.findByIdAndUpdate(req.user.id, {
       $push: { friend: idUserRequest }
     });
     await User.findByIdAndUpdate(idUserRequest, {
       $push: { friend: req.user.id }
     });
-    
+
     // user recevice
     await User.findByIdAndUpdate(req.user.id, {
-      $pull: { friendRequest:{ user: idUserRequest }}
+      $pull: { friendRequest: { user: idUserRequest } }
     });
     // user send
     await User.findByIdAndUpdate(idUserRequest, {
-      $pull: { sentFriendRequest: { user: req.user.id }}
+      $pull: { sentFriendRequest: { user: req.user.id } }
     });
     res.status(200).json({
       success: true,

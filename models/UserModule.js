@@ -13,7 +13,7 @@ const UserSchema = mongoose.Schema({
   code: { type: String, require: false, default: "" },
   isOnline: { type: Boolean, require: false, default: false},
   refreshToken: { type: String, require: true },
-  roomId: [{ type: mongoose.Schema.Types.ObjectId, require: false }],
+  roomId: [{ type: String, require: false }],
   friendRequest: [
     {
     //   type: mongoose.Schema.Types.ObjectId,
@@ -39,10 +39,15 @@ const UserSchema = mongoose.Schema({
     required: false,
     default: ""
   },
+  expiresIn: {
+    type: Date,
+    require: true
+  },
   createAt: {
     type: Date,
     default: Date.now()
-  }
+  },
+
 });
 
 // compare password
@@ -66,8 +71,7 @@ UserSchema.methods.getResetToken = function () {
 /// jwt token
 UserSchema.methods.getJwtToken = function (id) {
   return jwt.sign({ id: id }, process.env.JWT_SECRET_KEY, {
-    expiresIn: process.env.JWT_EXPIRES,
-    expiresIn: "1d"
+    expiresIn: Math.floor(Date.now() / 1000) + process.env.JWT_EXPIRES * 60
   });
 };
 

@@ -3,15 +3,21 @@ const User = require("../models/UserModule");
 
 
 exports.createRoom = async (req, res) => {
-    const { room_id } = req.body; 
-    const getRoom = await RoomId.findOne({room_id});
+    const { room_id, senderId , receverId } = req.body; 
+    const getRoom1 = await RoomId.findOne({ senderId: senderId, receverId: receverId});
+    const getRoom2 = await RoomId.findOne({ senderId: receverId, receverId: senderId });
     try { 
-        if(!getRoom) { 
-            const newRoom = await RoomId.create({
-                room_id
+        if(!getRoom1 && !getRoom2 ) { 
+            await RoomId.create({
+                room_id,
+                senderId: senderId, 
+                receverId: receverId
             })
-            await User.findByIdAndUpdate(req.user.id, {
-                $push: { roomId: newRoom._id }})
+            await User.findByIdAndUpdate(senderId, {
+                $push: { room_id: room_id }})
+
+            await User.findByIdAndUpdate(receverId, {
+                $push: { room_id: room_id }})
             res.status(200).json({
                 success: true,
                 message: `Create room_id: ${room_id} successfully.`
