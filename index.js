@@ -10,7 +10,6 @@ const mongoose = require("mongoose");
 const { userJoinGroup, getCurrentUserDetails, userLeaveGroup } = require('./untils/userSocket')
 
 const Message = require("./models/MessageModule");
-const { isAuthenticatedUser, authorizeRoles } = require("./middleware/auth");
 
 const io = socketIo(server);
 
@@ -41,7 +40,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   cros({
-    origin: "http://localhost:8081/",
+    origin: "*",
     method: "GET, POST, PUT, DELETE",
     Credential: true
   })
@@ -71,15 +70,11 @@ const users = [];
 io.on("connection", function (socket) {
   socket.on("connected", function (userId){
     users[userId] = socket.id;
-    console.log('users', users);
   })
   socket.on("Client-sent-data", function (data) {
-    console.log('data', data);
     //sau khi lắng nghe dữ liệu, server phát lại dữ liệu này đến các client khác
     socket.to(users[data.receverId]).emit('messageRecever', data);
   });
-
-  
 });
 
 
