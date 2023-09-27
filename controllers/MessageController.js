@@ -9,10 +9,10 @@ exports.createMessage = async (req, res) => {
         const { reciever } =req.params;
         const { roomId } = req.body;
         const { text, createdAt, image, sent, received, seen, deleteAt, hiddenTo, isReply} = req.body.messages[0];
-        const { name, avatar } = req.body.messages[0].user;
+        const { name, avatar, _id } = req.body.messages[0].user;
 
         const message = {
-            sender: req.user.id,
+            sender: sender,
             reciever: reciever,
             roomId: roomId,
             messages: [ 
@@ -20,7 +20,7 @@ exports.createMessage = async (req, res) => {
                     text: text,
                     createdAt: createdAt,
                     user: {
-                        id: sender,
+                        _id: _id,
                         name: name,
                         avatar:avatar
                     },
@@ -34,12 +34,9 @@ exports.createMessage = async (req, res) => {
                 }
         ]
         };
-        const exitMessage = await Message.findOne({
-            sender: req.user.id,
-            reciever: reciever,
+        const exitMessage = await Message.find({
             roomId: roomId
         });
-        console.log(sender && reciever && roomId && text || sender && reciever && roomId && image);
         if(!exitMessage) {
             await Message.create(message);
             res.status(200).json({
@@ -48,18 +45,16 @@ exports.createMessage = async (req, res) => {
                 showMessage: message
             })
         } else {
-            exitMessage.messages.push(message.messages[0]);
-            await exitMessage.save();
+            console.log(message.messages[0]);
+            await exitMessage[0].messages.push(message.messages[0]);
+            await exitMessage[0].save();
             res.status(200).json({
                 success: true,
                 message: 'Update message.',
             })
         }
         
-        
-        
     } catch (error) {
-        // socket.emit('messageError', { message: 'Have message error when send.'});
         res.status(500).json({
             success: false,
             message: error.message
@@ -108,21 +103,14 @@ exports.getUrl = async (req, res) => {
 // get all message of room one
 exports.getAllMessageOfRoom = async (req, res) => {
     try {
-        const { sender, reciever, roomId } = req.body;
-    const messages1 = await Message.find({
-        sender: sender,
-        reciever: reciever,
-        roomId: roomId
+        const { idRoom } = req.params;
+    const messages = await Message.find({
+        roomId: idRoom
     });
-    const messages2 = await Message.find({
-        sender: reciever,
-        reciever:sender ,
-        roomId: roomId
-    });
-    if(messages1 || messages2 ) {
+    if(messages ) {
         res.status(200).json({
             success: true,
-            listMessage: messages1 ? messages1 : messages2
+            listMessage: messages
         })
     }
     } catch (error) {

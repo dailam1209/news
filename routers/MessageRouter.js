@@ -7,6 +7,6 @@ const {createMessage, getUrl, getAllMessageOfRoom } = require("../controllers/Me
 
 router.route("/create-message/:reciever").post(isAuthenticatedUser, createMessage);
 router.route("/get-url").post(isAuthenticatedUser, getUrl);
-router.route("/get-all-message").get(isAuthenticatedUser, getAllMessageOfRoom);
+router.route("/get-all-message/:idRoom").get(isAuthenticatedUser, getAllMessageOfRoom);
 
 module.exports = router; 

@@ -1,10 +1,6 @@
 const express = require("express");
 const http = require("http");
-const socketIo = require("socket.io")(http, {
-  cors: {
-    origin: "*",
-  },
-});;
+const socketIo = require("socket.io")
 const app = express();
 const server = http.createServer(app);
 const bodyParser = require("body-parser");
@@ -74,8 +70,10 @@ const users = [];
 io.on("connection", function (socket) {
   socket.on("connected", function (userId){
     users[userId] = socket.id;
+    console.log(users);
   })
   socket.on("Client-sent-data", function (data) {
+    console.log(data);
     //sau khi lắng nghe dữ liệu, server phát lại dữ liệu này đến các client khác
     socket.to(users[data.receverId]).emit('messageRecever', data);
   });

@@ -16,7 +16,8 @@ const MessageSchema = mongoose.Schema(
         text:{ type: String, require: false, default: ''}, //message_content
         createdAt: { type: Date, require: true}, //message_creation_time
         user: {
-          _id: { type: String, require: true}, //sender_id
+          _id: { type: mongoose.Schema.Types.ObjectId,
+            ref: "User", require: true}, //sender_id
           name: { type: String, require: true, default: ''}, //sender_name
           avatar: { type: String, require: true, default: ''} //sender_photo
         },

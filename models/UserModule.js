@@ -13,6 +13,7 @@ const UserSchema = mongoose.Schema({
   code: { type: String, require: false, default: "" },
   isOnline: { type: Boolean, require: false, default: false},
   refreshToken: { type: String, require: true },
+  fcmToken: { type: String, require: false, default: ''},
   roomId: [{ type: String, require: false }],
   friendRequest: [
     {
@@ -43,6 +44,7 @@ const UserSchema = mongoose.Schema({
     type: Date,
     require: true
   },
+
   createAt: {
     type: Date,
     default: Date.now()

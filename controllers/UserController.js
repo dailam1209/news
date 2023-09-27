@@ -71,6 +71,26 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.postFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    if(fcmToken) {
+      const user = await User.findById(req.user.id);
+      user.fcmToken = fcmToken;
+      await user.save();
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Put fcmToken success.'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
+};
+
 exports.isOnline = async (req, res) => {
   const { state } = req.body;
   try {
