@@ -40,7 +40,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(
   cros({
-    origin: "*",
+    origin: "http://localhost:8081",
     method: "GET, POST, PUT, DELETE",
     Credential: true
   })
