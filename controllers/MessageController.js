@@ -5,14 +5,13 @@ const io = require('socket.io')
 
 exports.createMessage = async (req, res) => {
     try {
-        const { sender } = req.user.id;
-        const { reciever } =req.params;
+        const { reciever } = req.params;
         const { roomId } = req.body;
-        const { text, createdAt, image, sent, received, seen, deleteAt, hiddenTo, isReply} = req.body.messages[0];
+        const { text, system, createdAt, image, sent, received, seen, deleteAt, hiddenTo, isReply} = req.body.messages[0];
         const { name, avatar, _id } = req.body.messages[0].user;
 
         const message = {
-            sender: sender,
+            sender: req.user.id,
             reciever: reciever,
             roomId: roomId,
             messages: [ 
@@ -25,6 +24,7 @@ exports.createMessage = async (req, res) => {
                         avatar:avatar
                     },
                     image: image,
+                    system: system,
                     sent: sent,
                     received: received,
                     seen: seen,
@@ -34,10 +34,11 @@ exports.createMessage = async (req, res) => {
                 }
         ]
         };
+        console.log('second',  message);
         const exitMessage = await Message.find({
             roomId: roomId
         });
-        if(!exitMessage) {
+        if(exitMessage.length == 0) {
             await Message.create(message);
             res.status(200).json({
                 success: true,
@@ -45,7 +46,6 @@ exports.createMessage = async (req, res) => {
                 showMessage: message
             })
         } else {
-            console.log(message.messages[0]);
             await exitMessage[0].messages.push(message.messages[0]);
             await exitMessage[0].save();
             res.status(200).json({
@@ -107,10 +107,11 @@ exports.getAllMessageOfRoom = async (req, res) => {
     const messages = await Message.find({
         roomId: idRoom
     });
+   
     if(messages ) {
         res.status(200).json({
             success: true,
-            listMessage: messages
+            listMessage: messages,
         })
     }
     } catch (error) {

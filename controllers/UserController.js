@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const gennerCode = require("../untils/genercode");
 const jwt = require("jsonwebtoken");
 const Message = require("../models/MessageModule");
+const RoomIdModule = require("../models/RoomIdModule");
 
 // register
 exports.register = async (req, res) => {
@@ -352,13 +353,14 @@ exports.updateProfile = async (req, res) => {
     const { id } = req.params;
     const { name, email, phone } = req.body;
 
-    if (req.file && id) {
+    console.log("req.file.path",req.file.path);
+    if (req.file || id) {
       const user = await User.find({ id: id });
       if (user) {
         const newuserData = {
           name: name,
           email: email,
-          image: req.file.path,
+          image: user.image !== '' ? user.image : req.file.path ,
           phone: phone
         };
         await User.findByIdAndUpdate({ _id: id }, newuserData, {
@@ -481,9 +483,10 @@ exports.getAllFriend = async (req, res) => {
     const formattedUsers = resultUser.map((findUser) => ({
       username: findUser.username,
       email: findUser.email,
-      image: findUser.image,
+      image: findUser.image ? findUser.image : '' ,
       id: findUser._id,
-      isOnline: findUser.isOnline
+      isOnline: findUser.isOnline,
+      fcmToken: findUser.fcmToken ? findUser.fcmToken : ''
     }));
 
     // await Promise.all(
@@ -578,24 +581,33 @@ exports.getChats = async (req, res) => {
     // Tạo mảng các promise cho việc lấy thông tin các phòng chat
     const roomPromises = listRoom.map(async (value) => {
       const findAllMessage = await Message.find({ roomId: value });
+      const room = await RoomIdModule.find({
+        roomId: value
+      })
       if (findAllMessage.length > 0) {
-        const lastMessage = findAllMessage[findAllMessage.length - 1];
-        const userFind = lastMessage.sender == req.user.id ? lastMessage.reciever : lastMessage.sender;
-        const getUser = await User.findById(userFind);
-
-        const filterMessage = {
-          roomId: lastMessage.roomId,
-          sender: lastMessage.sender,
-          reciever: lastMessage.reciever,
-          text: lastMessage.messages[lastMessage.messages.length - 1].text,
-          isOnline: getUser?.isOnline,
-          image: getUser.image,
-          username: getUser.username,
-          idSender: lastMessage.messages.user ? lastMessage.messages.user : '' ,
-          createAt: lastMessage.createAt
-        };
-
-        lastMessageAll.push(filterMessage);
+        const lastMessage = findAllMessage[0].messages[findAllMessage[0].messages.length - 1];
+        if(lastMessage.text !== '') {
+          const userFind = findAllMessage[0].sender == req.user.id ? findAllMessage[0].reciever : findAllMessage[0].sender;
+          const getUser = await User.findById(userFind);
+  
+          const filterMessage = {
+            roomId: findAllMessage[0].roomId,
+            sender: findAllMessage[0].sender,
+            reciever: findAllMessage[0].reciever,
+            text: findAllMessage[0].messages[findAllMessage[0].messages.length - 1].text,
+            isOnline: getUser?.isOnline,
+            image: getUser.image ? getUser.image : '',
+            username: getUser.username,
+            fcmToken: getUser.fcmToken,
+            idSender: findAllMessage[0].messages.user ? findAllMessage[0].messages.user : '' ,
+            createAt: lastMessage.createdAt,
+            typeRoom: room.typeRoom ? room.typeRoom : "one",
+            imageRoom: room.imageRoom ? room.imageRoom : '',
+            nameRoom: room.nameRoom ? room.nameRoom : ''
+          };
+  
+          lastMessageAll.push(filterMessage);
+        }
       }
     });
 
@@ -853,5 +865,40 @@ exports.getAllSentOfMe = async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+};
+
+exports.onRoom = async (req, res) => {
+  try {
+    const { idRoom } = req.body;
+    const user  = await User.findById(req.user.id);
+    user.onRoom = idRoom;
+    await user.save();
+    res.status(200).json({
+      success: true,
+      message: 'OnRoom'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
+};
+
+exports.leftRoom = async (req, res) => {
+  try {
+    const user  = await User.findById(req.user.id);
+    user.onRoom = '';
+    await user.save();
+    res.status(200).json({
+      success: true,
+      message: 'LeftRoom'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
   }
 };

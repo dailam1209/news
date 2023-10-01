@@ -61,21 +61,54 @@ app.get("/", function (req, res) {
 
 app.use("/api", newApi);
 app.use("/upload", parser.single("avatar"), userApi);
-app.use("/api", parser.single("url"), messageAPi );
 app.use("", userApi);
 app.use("/api", roomApi);
 app.use("/api", messageAPi);
+app.use("/api", parser.single("avatar"), messageAPi );
 
+let chatRoom = '';
 const users = [];
+// io.on("connection", function (socket) {
+//   socket.on("connected", function (userId){
+//     // users.push({id: socket.id, username, room})
+//     users[userId] = socket.id;
+//     console.log(users);
+//   })
+  
+//   socket.on("join-room", function (data) {
+//     // const {  room } = data;
+//     console.log(data);
+//     //sau khi lắng nghe dữ liệu, server phát lại dữ liệu này đến các client khác
+//     socket.to(room).emit('messageRecever', data);
+//   });
+// });
+let chatRoomUsers = []
+let allUsers = []
 io.on("connection", function (socket) {
-  socket.on("connected", function (userId){
-    users[userId] = socket.id;
-    console.log(users);
-  })
-  socket.on("Client-sent-data", function (data) {
-    console.log(data);
-    //sau khi lắng nghe dữ liệu, server phát lại dữ liệu này đến các client khác
-    socket.to(users[data.receverId]).emit('messageRecever', data);
+  socket.on("connected",  (user) => {
+    let chatRoom = user.room;
+    allUsers.push({ id: socket.id, username: user.name, room: user.room });
+    chatRoomUsers =allUsers.filter((user) => user.room === chatRoom && user.username && user.room);
+    socket.join(user.room); 
+    })
+      
+  
+
+  // Add this
+  // Add a user to a room
+  socket.on('send_message', (data) => {
+    console.log('data', data);
+    socket.broadcast.to(data.roomId).emit('receive_message', data);
+  });
+
+  socket.on('leave_room', (data) => {
+    const { room } = data;
+    socket.leave(room);
+    // Remove user from memory
+    allUsers = chatRoomUsers.filter((user) => user.id !== socket.id && user.username );
+    console.log('allUsers left', allUsers);
+    // socket.to(room).emit('chatroom_users', allUsers);
+    
   });
 });
 
@@ -83,3 +116,10 @@ io.on("connection", function (socket) {
 server.listen(process.env.PORT, () => {
   console.log(` Listenning to port ${process.env.PORT}`);
 });
+
+
+// server.listen(process.env.PORT, () => {
+//   console.log(` Listenning to port ${process.env.PORT}`);
+// });
+
+

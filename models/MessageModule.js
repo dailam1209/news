@@ -13,6 +13,7 @@ const MessageSchema = mongoose.Schema(
     roomId: { type: String, require: true },
     messages: [
       {
+        system: {type: Boolean, require: false, default: false},
         text:{ type: String, require: false, default: ''}, //message_content
         createdAt: { type: Date, require: true}, //message_creation_time
         user: {
@@ -25,7 +26,7 @@ const MessageSchema = mongoose.Schema(
         sent: {type: Boolean, require: true, default: true},
         received:{type: Boolean, require: true, default: false},
         seen: { type: Boolean, require: true, default: false},
-        deleteAt: { type: Date, require: false},
+        deleteAt: { type: Date, require: false, default:''},
         hiddenTo: {
           type: Array,
           default: []

@@ -15,6 +15,7 @@ const UserSchema = mongoose.Schema({
   refreshToken: { type: String, require: true },
   fcmToken: { type: String, require: false, default: ''},
   roomId: [{ type: String, require: false }],
+  onRoom:{ type: String, require: false ,default: ''},
   friendRequest: [
     {
     //   type: mongoose.Schema.Types.ObjectId,

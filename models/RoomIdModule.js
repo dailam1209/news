@@ -2,8 +2,11 @@ const mongoose = require("mongoose");
 
 const RoomIdSchema = mongoose.Schema({
     room_id: { type: String, require: true},
-    senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,require: true },
-    receverId: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,require: true },
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,require: false },
+    receverId: { type: mongoose.Schema.Types.ObjectId, ref: "User" ,require: false },
+    typeRoom:{ type: String, require: false, default: ''},
+    imageRoom: {type: String, require: false, default: ''},
+    nameRoom:{type: String, require: false, default: ''}, 
     createAt: {
         type: Date,
         default: Date.now()
