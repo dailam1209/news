@@ -7,6 +7,17 @@ const RoomIdSchema = mongoose.Schema({
     typeRoom:{ type: String, require: false, default: ''},
     imageRoom: {type: String, require: false, default: ''},
     nameRoom:{type: String, require: false, default: ''}, 
+    listUserOnline: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        }
+    ],
+    listUserOffline:[
+        {
+            type: String,
+        }
+    ],
     createAt: {
         type: Date,
         default: Date.now()

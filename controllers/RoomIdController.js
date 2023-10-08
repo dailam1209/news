@@ -96,3 +96,30 @@ exports.deleteRoom = async (req, res) => {
     });
   }
 };
+
+// left room 
+exports.leftRoom = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fcmToken } = req.body;
+    if(id) {
+      await RoomId.findOneAndUpdate(
+        { room_id : id },
+        {
+          $pull: { listUserOnline: req.user.id },
+          $push: { listUserOffline: fcmToken }
+        },
+      );
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Left success'
+    })
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
+}

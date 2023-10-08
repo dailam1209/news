@@ -60,28 +60,15 @@ app.get("/", function (req, res) {
 });
 
 app.use("/api", newApi);
-app.use("/upload", parser.single("avatar"), userApi);
 app.use("", userApi);
+app.use("/upload", parser.single("avatar"), userApi);
 app.use("/api", roomApi);
 app.use("/api", messageAPi);
 app.use("/api", parser.single("avatar"), messageAPi );
 
 let chatRoom = '';
 const users = [];
-// io.on("connection", function (socket) {
-//   socket.on("connected", function (userId){
-//     // users.push({id: socket.id, username, room})
-//     users[userId] = socket.id;
-//     console.log(users);
-//   })
-  
-//   socket.on("join-room", function (data) {
-//     // const {  room } = data;
-//     console.log(data);
-//     //sau khi lắng nghe dữ liệu, server phát lại dữ liệu này đến các client khác
-//     socket.to(room).emit('messageRecever', data);
-//   });
-// });
+
 let chatRoomUsers = []
 let allUsers = []
 io.on("connection", function (socket) {

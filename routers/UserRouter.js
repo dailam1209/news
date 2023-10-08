@@ -54,7 +54,6 @@ router.route("/remove-friend/:userRemove").put( isAuthenticatedUser, removeFrien
 router.route("/remove-friend-all/:userRemove").put( isAuthenticatedUser, removeFriendWhenMeSend);
 router.route("/accept-friend/:idUserRequest").post( isAuthenticatedUser, acceptRequestFriend);
 router.route("/on-room/:idRoom").post( isAuthenticatedUser, onRoom);
-router.route("/left-room/:idRoom").post( isAuthenticatedUser, leftRoom);
 
 
 module.exports = router;

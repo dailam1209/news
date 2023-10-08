@@ -75,20 +75,20 @@ exports.login = async (req, res) => {
 exports.postFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
-    if(fcmToken) {
+    if (fcmToken) {
       const user = await User.findById(req.user.id);
       user.fcmToken = fcmToken;
       await user.save();
     }
     res.status(200).json({
       success: true,
-      message: 'Put fcmToken success.'
-    })
+      message: "Put fcmToken success."
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message
-    })
+    });
   }
 };
 
@@ -353,14 +353,14 @@ exports.updateProfile = async (req, res) => {
     const { id } = req.params;
     const { name, email, phone } = req.body;
 
-    console.log("req.file.path",req.file.path);
+    console.log("req.file.path", req.file);
     if (req.file || id) {
       const user = await User.find({ id: id });
       if (user) {
         const newuserData = {
           name: name,
           email: email,
-          image: user.image !== '' ? user.image : req.file.path ,
+          image: user.image !== "" ? user.image : req.file.path,
           phone: phone
         };
         await User.findByIdAndUpdate({ _id: id }, newuserData, {
@@ -408,8 +408,8 @@ exports.refreshAccessToken = async (req, res) => {
     );
 
     return res.status(200).json({
-      accessToken: newAccessToken,
-      refreshToken: refreshToken
+      user: findUser,
+      accessToken: newAccessToken
     });
   } catch (error) {
     return res.status(500).json({ message: error });
@@ -483,10 +483,10 @@ exports.getAllFriend = async (req, res) => {
     const formattedUsers = resultUser.map((findUser) => ({
       username: findUser.username,
       email: findUser.email,
-      image: findUser.image ? findUser.image : '' ,
+      image: findUser.image ? findUser.image : "",
       id: findUser._id,
       isOnline: findUser.isOnline,
-      fcmToken: findUser.fcmToken ? findUser.fcmToken : ''
+      fcmToken: findUser.fcmToken ? findUser.fcmToken : ""
     }));
 
     // await Promise.all(
@@ -537,7 +537,7 @@ exports.getAllFriend = async (req, res) => {
 //           const messages = item.messages;
 //           if (messages.length > 0) {
 //             const lastMessage = messages[messages.length - 1];
-//             const filterMessage = 
+//             const filterMessage =
 //               {
 //                 roomId: item.roomId,
 //                 sender: item.render,
@@ -580,32 +580,54 @@ exports.getChats = async (req, res) => {
 
     // Tạo mảng các promise cho việc lấy thông tin các phòng chat
     const roomPromises = listRoom.map(async (value) => {
-      const findAllMessage = await Message.find({ roomId: value });
+      const findAllMessage = await Message.findOne({ roomId: value });
       const room = await RoomIdModule.find({
         roomId: value
-      })
-      if (findAllMessage.length > 0) {
-        const lastMessage = findAllMessage[0].messages[findAllMessage[0].messages.length - 1];
-        if(lastMessage.text !== '') {
-          const userFind = findAllMessage[0].sender == req.user.id ? findAllMessage[0].reciever : findAllMessage[0].sender;
+      });
+      let count = 0;
+      console.log("findAllMessage[0]?.messages", findAllMessage.messages[0]);
+     
+      // Lặp qua các tin nhắn và cập nhật trường 'seen' thành true
+      // await findAllMessage?.messages?.forEach((msg) => {
+      //   if (!msg.seen && msg.user._id.toString() !== user._id.toString()) {
+      //     count ++;
+      //   }
+      // });
+      if (findAllMessage) {
+        const lastMessage =
+          findAllMessage[0].messages[findAllMessage[0].messages.length - 1];
+        if (lastMessage.text !== "") {
+          // const userFind = findAllMessage[0].messages.sender == req.user.id ? findAllMessage[0].reciever : findAllMessage[0].sender;
+          const userFind = lastMessage.reciever;
           const getUser = await User.findById(userFind);
-  
+
           const filterMessage = {
             roomId: findAllMessage[0].roomId,
-            sender: findAllMessage[0].sender,
-            reciever: findAllMessage[0].reciever,
-            text: findAllMessage[0].messages[findAllMessage[0].messages.length - 1].text,
+            sender: {
+              id: findAllMessage[0].sender,
+              username:
+                findAllMessage[0].messages[
+                  findAllMessage[0].messages.length - 1
+                ].user.name
+            },
+            reciever: userFind,
+            text: findAllMessage[0].messages[
+              findAllMessage[0].messages.length - 1
+            ].text,
             isOnline: getUser?.isOnline,
-            image: getUser.image ? getUser.image : '',
+            image: getUser.image ? getUser.image : "",
             username: getUser.username,
             fcmToken: getUser.fcmToken,
-            idSender: findAllMessage[0].messages.user ? findAllMessage[0].messages.user : '' ,
+            idSender: findAllMessage[0].messages.user
+              ? findAllMessage[0].messages.user
+              : "",
             createAt: lastMessage.createdAt,
             typeRoom: room.typeRoom ? room.typeRoom : "one",
-            imageRoom: room.imageRoom ? room.imageRoom : '',
-            nameRoom: room.nameRoom ? room.nameRoom : ''
+            imageRoom: room.imageRoom ? room.imageRoom : "",
+            nameRoom: room.nameRoom ? room.nameRoom : "",
+            count: count
           };
-  
+
           lastMessageAll.push(filterMessage);
         }
       }
@@ -871,34 +893,17 @@ exports.getAllSentOfMe = async (req, res) => {
 exports.onRoom = async (req, res) => {
   try {
     const { idRoom } = req.body;
-    const user  = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id);
     user.onRoom = idRoom;
     await user.save();
     res.status(200).json({
       success: true,
-      message: 'OnRoom'
-    })
+      message: "OnRoom"
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message
-    })
-  }
-};
-
-exports.leftRoom = async (req, res) => {
-  try {
-    const user  = await User.findById(req.user.id);
-    user.onRoom = '';
-    await user.save();
-    res.status(200).json({
-      success: true,
-      message: 'LeftRoom'
-    })
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    })
+    });
   }
 };

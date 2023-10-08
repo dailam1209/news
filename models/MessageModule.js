@@ -31,7 +31,11 @@ const MessageSchema = mongoose.Schema(
           type: Array,
           default: []
         },
-        isReply: Object // Store here un object like: { text:'Reply to a message', name: 'Axel' }
+        isReply: Object, // Store here un object like: { text:'Reply to a message', name: 'Axel' }
+        reciever: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User", require: true
+        }
       }
     ],
     createAt: {
