@@ -98,12 +98,16 @@ exports.updateMessage = async (req, res) => {
 
 exports.getUrl = async (req, res) => {
   try {
-    console.log("url", req.file);
-    if (req.file) {
+    console.log("url", req.imageUrl);
+    if (req.imageUrl) {
       res.status(200).json({
         success: true,
-        image: req.file.path
+        image: req.imageUrl
       });
+    } else {
+      res.status(400).json({
+        message: 'Please choose image again.'
+      })
     }
   } catch (error) {
     res.status(500).json({
@@ -143,8 +147,9 @@ exports.checkMessage = async (req, res) => {
   try {
     const { id } = req.params;
     const idUser = req.user.id;
-    // const message = await Message.findOne({ roomId: id });
+    const { limit, nextPage } = req.query;
     const message = await Message.findOne({ roomId: id });
+    const lengthMessage = message.messages.length;
 
     if (!message) {
       return res.status(404).json({
@@ -155,7 +160,7 @@ exports.checkMessage = async (req, res) => {
 
     // Lặp qua các tin nhắn và cập nhật trường 'seen' thành true
     await message.messages.forEach((msg) => {
-      if (!msg.seen && msg.user._id.toString() !== idUser) {
+      if (!msg.system && !msg.seen && msg.user._id.toString() !== idUser) {
         console.log(msg.user._id , idUser);
         msg.seen = true;
       }
@@ -164,9 +169,19 @@ exports.checkMessage = async (req, res) => {
     // Lưu lại tài liệu đã được cập nhật
     await message.save();
     
+    let limitMessage = [];
+    console.log(Number(nextPage * limit) + Number(limit) );
+    if((Number(nextPage * limit) + Number(limit))<= lengthMessage) {
+      limitMessage = message.messages.slice(lengthMessage - 1 - ((nextPage * limit), lengthMessage - 1 - (nextPage * limit) + limit))
+    } else if(Number(nextPage * limit) <= lengthMessage) {
+      limitMessage = message.messages.slice(0 , lengthMessage - 1 - (nextPage * limit))
+    } else {
+      limitMessage = []
+    };
+    
     res.status(200).json({
       success: true,
-      messages: message.messages,
+      messages: limitMessage,
     });
   } catch (error) {
     res.status(500).json({

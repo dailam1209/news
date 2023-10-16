@@ -27,7 +27,8 @@ const {
     getAllFriend,
     postFcmToken,
     onRoom,
-    leftRoom
+    leftRoom,
+    imageUrl
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);
@@ -41,7 +42,7 @@ router.route("/reset-password").post( resetpassword);
 router.route("/update-password").post( updatePassword);
 router.route("/check-email").post( checkEmail);
 router.route("/delete-code").post( deleteCode);
-router.route("/update/:id").put( isAuthenticatedUser, updateProfile);
+router.route("/update/:id").post( isAuthenticatedUser, updateProfile);
 router.route("/refresh-token").post(refreshAccessToken);
 router.route("/search").get( isAuthenticatedUser, getAlluserSameName);
 router.route("/friend/:id").get( isAuthenticatedUser, getAllFriend);
@@ -54,6 +55,7 @@ router.route("/remove-friend/:userRemove").put( isAuthenticatedUser, removeFrien
 router.route("/remove-friend-all/:userRemove").put( isAuthenticatedUser, removeFriendWhenMeSend);
 router.route("/accept-friend/:idUserRequest").post( isAuthenticatedUser, acceptRequestFriend);
 router.route("/on-room/:idRoom").post( isAuthenticatedUser, onRoom);
+router.route("/url").post(imageUrl);
 
 
 module.exports = router;

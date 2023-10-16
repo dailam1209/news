@@ -5,6 +5,7 @@ const sendEmail = require("../untils/sendEmail");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const gennerCode = require("../untils/genercode");
+const makeid = require("../untils/genercode");
 const jwt = require("jsonwebtoken");
 const Message = require("../models/MessageModule");
 const RoomIdModule = require("../models/RoomIdModule");
@@ -51,19 +52,20 @@ exports.login = async (req, res) => {
     if (!user) {
       res.status(400).json({
         success: false,
-        message: "Request Fail"
+        message: "Please check email or password again."
+      });
+    } else {
+      bcrypt.compare(password, user.password, function (err, result) {
+        if (err) {
+          res.status(401).json({
+            success: false,
+            message: e.message
+          });
+        }
+        sendToken(user, 200, res);
       });
     }
 
-    bcrypt.compare(password, user.password, function (err, result) {
-      if (err) {
-        res.status(401).json({
-          success: false,
-          message: e.message
-        });
-      }
-      sendToken(user, 200, res);
-    });
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -131,10 +133,10 @@ exports.logout = async (req, res, next) => {
 };
 
 // forgot password -> ok
-exports.forgotpassword = async (req, res, next) => {
+exports.forgotpassword = async (req, res) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email });
   if (!user) {
     res.status(400).json({
       message: "Not found email match."
@@ -142,23 +144,17 @@ exports.forgotpassword = async (req, res, next) => {
   } else {
     //    const resetToken = user.getResetToken();
     const resetToken = crypto.randomBytes(20).toString("hex");
-
     // user.resetPasswordToken = crypto.createHash("sha256")
     //                                 .update(resetToken)
     //                                 .digest("hex");
 
-    user.resetPasswordTime = Date.now();
-    setTimeout(async function () {
-      user.resetPasswordTime = "";
-      await user.save({
-        validateBeforeSave: false
-      });
-    }, 200000);
-    user.code = gennerCode(6);
+    user.code = makeid(6);
+    console.log(typeof user.code);
 
-    await user.save({
-      validateBeforeSave: false
-    });
+    user.resetPasswordTime = Date.now();
+
+    await user.save();
+    console.log('user', user);
 
     const resetPasswordUrl = `${req.protocol}://${req.get(
       "host"
@@ -198,6 +194,48 @@ exports.forgotpassword = async (req, res, next) => {
   }
 };
 
+// exports.forgotPassword = async (req, res) => {
+//   const { email } = req.body;
+
+//   const user = await User.findOne({ email });
+//   try {
+
+//     if (!user) {
+//       return res.status(400).json({ message: "Email not found." });
+//     }
+
+//     const resetToken = crypto.randomBytes(20).toString("hex");
+//     const code = makeid(6);
+//     user.code = code;
+//     user.resetPasswordTime = Date.now();
+
+//     await user.save();
+
+//     const resetPasswordUrl = `${req.protocol}://${req.get("host")}/password/reset/${resetToken}`;
+//     const message = `Your password reset token is: \n\n ${resetPasswordUrl}`;
+
+//     if (user.code) {
+//       await sendEmail({
+//         email: user.email,
+//         subject: "Password Reset",
+//         message,
+//       });
+
+//       return res.status(200).json({
+//         success: true,
+//         message: `Email sent to ${user.email} successfully.`,
+//       });
+//     } else {
+//       return res.status(400).json({ message: "No code to send." });
+//     }
+//   } catch (err) {
+//     user.resetPasswordToken = undefined;
+//     user.resetPasswordTime = undefined;
+//     await user.save({ validateBeforeSave: false });
+//     return res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
 exports.checkEmail = async (req, res, next) => {
   try {
     const { email } = req.body;
@@ -225,21 +263,25 @@ exports.checkEmail = async (req, res, next) => {
 
 exports.deleteCode = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, code } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
       return next(ErrHandle("Not found email matched", 400, res));
-    }
+    } else {
+      if(user.code == code) {
 
-    user.code = "";
-    await user.save({
-      validateBeforeSave: false
-    });
+        user.code = "";
+        await user.save({
+          validateBeforeSave: false
+        });
+    
+        res.status(200).json({
+          success: true,
+          message: "Delete Code"
+        });
+      }
+      }
 
-    res.status(200).json({
-      success: true,
-      message: "Delete Code"
-    });
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -262,13 +304,11 @@ exports.userDetails = async (req, res, next) => {
 exports.resetpassword = async (req, res) => {
   try {
     const { token } = req.query;
-    console.log("token", token);
     const resetPasswordToken = crypto
       .createHash("sha256")
       .update(token)
       .digest("hex");
 
-    console.log(resetPasswordToken);
     const user = User.findOne({
       resetPasswordToken: resetPasswordToken,
       resetPasswordTime: { $gt: Date.now() }
@@ -350,30 +390,30 @@ exports.updatePassword = async (req, res, next) => {
 // update profile user -> ok
 exports.updateProfile = async (req, res) => {
   try {
+    console.log('vao roi');
     const { id } = req.params;
     const { name, email, phone } = req.body;
 
-    console.log("req.file.path", req.file);
-    if (req.file || id) {
-      const user = await User.find({ id: id });
-      if (user) {
-        const newuserData = {
-          name: name,
-          email: email,
-          image: user.image !== "" ? user.image : req.file.path,
-          phone: phone
-        };
-        await User.findByIdAndUpdate({ _id: id }, newuserData, {
-          new: true,
-          runValidators: true,
-          userFindAndModify: false
+    const user = await User.findById(id);
+    if(user) {
+
+      console.log("req.file.path", req.imageUrl);
+        user.image = req.imageUrl ?  req.imageUrl : user.image;
+        user.name = name;
+        user.email = email;
+        user.phone = phone;
+        await user.save()
+        
+        res.status(200).json({
+          success: true,
+          message: `${user.name} have updated.`,
+          user: user
         });
-      }
-      const userUpdate = await User.find({ _id: id });
-      await res.json({
-        success: true,
-        message: `${user.name} have updated.`,
-        user: userUpdate
+    }
+     else {
+      res.status(400).json({
+        success: false,
+        message: `Update faild.`,
       });
     }
   } catch (err) {
@@ -427,7 +467,7 @@ exports.getAlluserSameName = async (req, res) => {
         {
           $or: [
             { username: { $regex: queryName.trim(), $options: "i" } }, // Case-insensitive search
-            { email: { $regex: queryName.trim(), $options: "i" } } // Case-insensitive search
+            // { email: { $regex: queryName.trim(), $options: "i" } } // Case-insensitive search
           ]
         },
         { _id: { $ne: currentUserId } } // Exclude the current user
@@ -436,10 +476,14 @@ exports.getAlluserSameName = async (req, res) => {
 
     // Get the IDs of the current user's friends
     const userCurrent = await User.findById(currentUserId).select("friend");
+    const userCurrentFriend = await User.findById(currentUserId).select("sentFriendRequest");
+   
     const friendsIds = userCurrent.friend;
+    const sentFriendIs = userCurrentFriend.sentFriendRequest;
 
     // Create a map for faster friend lookup
     const friendsMap = new Map(friendsIds.map((id) => [id.toString(), true]));
+    const sentFriendMap = new Map(sentFriendIs.map((id) => [id.user.toString(), true]));
 
     // Prepare the list of results
     const listResult = users.map((user) => ({
@@ -447,7 +491,7 @@ exports.getAlluserSameName = async (req, res) => {
       username: user.username,
       image: user.image || "",
       email: user.email,
-      isFriend: friendsMap.has(user._id.toString()) // Check if the user is a friend
+      isFriend: friendsMap.has(user._id.toString()) || sentFriendMap.has(user._id.toString()) // Check if the user is a friend
     }));
 
     res.status(200).json({
@@ -565,6 +609,8 @@ exports.getAllFriend = async (req, res) => {
 //   }
 // };
 
+
+//  last of all chats
 exports.getChats = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -579,54 +625,68 @@ exports.getChats = async (req, res) => {
     const listRoom = user.roomId;
 
     // Tạo mảng các promise cho việc lấy thông tin các phòng chat
-    const roomPromises = listRoom.map(async (value) => {
+    const roomPromises = await listRoom.map(async (value) => {
       const findAllMessage = await Message.findOne({ roomId: value });
-      const room = await RoomIdModule.find({
-        roomId: value
-      });
+      const room = await RoomIdModule.findOne({
+        room_id: value
+    });
+      let imageOfFriendChat = '';
+      let nameOfFriendChat = '';
+    console.log("req.user.id === room.senderId.toString()", req.user.id , room.senderId);
+      if(!room.typeRoom) {
+        console.log('one');
+        const idUser = req.user.id == room.senderId.toString()
+        ? room.receverId : room.senderId ;
+        let user = await User.findById(idUser);
+        nameOfFriendChat = user.username;
+        imageOfFriendChat = user.image;
+      } else {
+        console.log('group');
+        nameOfFriendChat = room.nameRoom;
+        imageOfFriendChat = room.imageRoom;
+      }
       let count = 0;
-      console.log("findAllMessage[0]?.messages", findAllMessage.messages[0]);
      
       // Lặp qua các tin nhắn và cập nhật trường 'seen' thành true
-      // await findAllMessage?.messages?.forEach((msg) => {
-      //   if (!msg.seen && msg.user._id.toString() !== user._id.toString()) {
-      //     count ++;
-      //   }
-      // });
+      await findAllMessage?.messages?.forEach((msg) => {
+        if (!msg.seen && msg.user.name && msg?.user?._id?.toString() !== req.user.id) {
+          count ++;
+        }
+      });
       if (findAllMessage) {
         const lastMessage =
-          findAllMessage[0].messages[findAllMessage[0].messages.length - 1];
-        if (lastMessage.text !== "") {
-          // const userFind = findAllMessage[0].messages.sender == req.user.id ? findAllMessage[0].reciever : findAllMessage[0].sender;
+          findAllMessage.messages[findAllMessage.messages.length - 1];
+        if (lastMessage.text !== "" || lastMessage.image !== '') {
+          // const userFind = findAllMessage.messages.sender == req.user.id ? findAllMessage.reciever : findAllMessage.sender;
           const userFind = lastMessage.reciever;
           const getUser = await User.findById(userFind);
 
           const filterMessage = {
-            roomId: findAllMessage[0].roomId,
+            roomId: findAllMessage.roomId,
             sender: {
-              id: findAllMessage[0].sender,
+              id: findAllMessage.sender,
               username:
-                findAllMessage[0].messages[
-                  findAllMessage[0].messages.length - 1
-                ].user.name
+              lastMessage.user.name
             },
             reciever: userFind,
-            text: findAllMessage[0].messages[
-              findAllMessage[0].messages.length - 1
+            text: findAllMessage.messages[
+              findAllMessage.messages.length - 1
             ].text,
+            image:lastMessage.image,
             isOnline: getUser?.isOnline,
-            image: getUser.image ? getUser.image : "",
-            username: getUser.username,
+            imageUser: imageOfFriendChat,
+            username: nameOfFriendChat,
             fcmToken: getUser.fcmToken,
-            idSender: findAllMessage[0].messages.user
-              ? findAllMessage[0].messages.user
+            idSender: findAllMessage.messages.user
+              ? findAllMessage.messages.user
               : "",
             createAt: lastMessage.createdAt,
-            typeRoom: room.typeRoom ? room.typeRoom : "one",
-            imageRoom: room.imageRoom ? room.imageRoom : "",
-            nameRoom: room.nameRoom ? room.nameRoom : "",
+            typeRoom: room.typeRoom ,
+            imageRoom: imageOfFriendChat,
+            nameRoom: nameOfFriendChat,
             count: count
           };
+          console.log("filterMessage", filterMessage);
 
           lastMessageAll.push(filterMessage);
         }
@@ -907,3 +967,18 @@ exports.onRoom = async (req, res) => {
     });
   }
 };
+
+exports.imageUrl = async (req, res) => {
+  try {
+    console.log('url', req.file);
+    if(req.file) {
+      res.status(200).json({
+        imageUrl: req.file.path
+      })
+    } 
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    })
+  }
+}

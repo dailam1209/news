@@ -7,9 +7,7 @@ const bodyParser = require("body-parser");
 const cros = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
-const { userJoinGroup, getCurrentUserDetails, userLeaveGroup } = require('./untils/userSocket')
 
-const Message = require("./models/MessageModule");
 
 const io = socketIo(server);
 
@@ -21,9 +19,9 @@ const upload = multer({ dest: "uploads/" });
 // Cấu hình CloudinaryStorage
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  folder: "uploads", // Thay đổi tên thư mục tùy theo yêu cầu
+  folder: "uploads", 
   allowedFormats: ["jpg", "png", "jpeg"],
-  transformation: [{ width: 500, height: 500, crop: "limit" }]
+  transformation: [{ width: 100, height: 100, crop: "limit" }]
 });
 // Tạo middleware multer sử dụng CloudinaryStorage
 const parser = multer({ storage: storage });
@@ -55,19 +53,34 @@ mongoose
     console.log(err);
   });
 
-app.get("/", function (req, res) {
-  res.render();
-});
 
 app.use("/api", newApi);
 app.use("", userApi);
-app.use("/upload", parser.single("avatar"), userApi);
+app.use("/upload", async (req, res, next) => {
+   await parser.single("image")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: 'Error uploading file' });
+    }
+    const imageUrl = req?.file?.path;
+
+    req.imageUrl = imageUrl;
+    next();
+  });
+}, userApi );
 app.use("/api", roomApi);
 app.use("/api", messageAPi);
-app.use("/api", parser.single("avatar"), messageAPi );
+app.use("/api/image", async (req, res, next) => {
+  await parser.single("image")(req, res, (err) => {
+   if (err) {
+     return res.status(400).json({ error: 'Error uploading file' });
+   }
+   const imageUrl = req?.file?.path;
 
-let chatRoom = '';
-const users = [];
+   req.imageUrl = imageUrl;
+   next();
+ });
+}, messageAPi );
+
 
 let chatRoomUsers = []
 let allUsers = []
@@ -75,7 +88,7 @@ io.on("connection", function (socket) {
   socket.on("connected",  (user) => {
     let chatRoom = user.room;
     allUsers.push({ id: socket.id, username: user.name, room: user.room });
-    chatRoomUsers =allUsers.filter((user) => user.room === chatRoom && user.username && user.room);
+    chatRoomUsers =allUsers.filter((user) => user.room == chatRoom);
     socket.join(user.room); 
     })
       
@@ -84,16 +97,14 @@ io.on("connection", function (socket) {
   // Add this
   // Add a user to a room
   socket.on('send_message', (data) => {
-    console.log('data', data);
-    socket.broadcast.to(data.roomId).emit('receive_message', data);
+    io.to(data.roomId).emit('receive_message', data);
   });
 
   socket.on('leave_room', (data) => {
     const { room } = data;
     socket.leave(room);
     // Remove user from memory
-    allUsers = chatRoomUsers.filter((user) => user.id !== socket.id && user.username );
-    console.log('allUsers left', allUsers);
+    allUsers = chatRoomUsers.filter((user) => user.id !== socket.id);
     // socket.to(room).emit('chatroom_users', allUsers);
     
   });
@@ -103,10 +114,5 @@ io.on("connection", function (socket) {
 server.listen(process.env.PORT, () => {
   console.log(` Listenning to port ${process.env.PORT}`);
 });
-
-
-// server.listen(process.env.PORT, () => {
-//   console.log(` Listenning to port ${process.env.PORT}`);
-// });
 
 
