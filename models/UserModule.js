@@ -18,12 +18,11 @@ const UserSchema = mongoose.Schema({
   onRoom:{ type: String, require: false ,default: ''},
   friendRequest: [
     {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "User",
       user: {type: mongoose.Schema.Types.ObjectId, ref: "User", require: true},
       createdAt: { type: Date, require: true, default: Date.now() }
     }
   ],
+  countFriendRequest: {type: Number, require: false, default: 0},
   friend: [
     {
         type: mongoose.Schema.Types.ObjectId,

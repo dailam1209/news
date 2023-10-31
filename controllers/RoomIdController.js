@@ -2,6 +2,7 @@ const RoomId = require("../models/RoomIdModule");
 const User = require("../models/UserModule");
 const Message = require("../models/MessageModule");
 const genercode = require("../untils/genercode");
+const RoomIdModule = require("../models/RoomIdModule");
 
 
 // cần chỉnh lại chưa tối ưu(test)
@@ -106,8 +107,8 @@ exports.leftRoom = async (req, res) => {
       await RoomId.findOneAndUpdate(
         { room_id : id },
         {
+          $push: { listUserOffline: fcmToken },
           $pull: { listUserOnline: req.user.id },
-          $push: { listUserOffline: fcmToken }
         },
       );
     }
@@ -122,4 +123,26 @@ exports.leftRoom = async (req, res) => {
       message: error.message
     })
   }
+};
+
+exports.pushFcmRoom = async (req, res) => {
+  try {
+    const { idRoom } = req.params;
+  const user = await User.find();
+  const room = await RoomIdModule.find({ room_id: idRoom})
+  const userHaveSameRoom = await user.filter((user) => user.roomId.includes(idRoom));
+  await userHaveSameRoom.map((user) => {
+    room.listUserOffline.push(user.fcmToken);
+  });
+  res.status(200).json({
+    success: true,
+    message: 'PUT success'
+  })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
+  
 }

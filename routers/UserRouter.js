@@ -28,11 +28,17 @@ const {
     postFcmToken,
     onRoom,
     leftRoom,
-    imageUrl
+    imageUrl,
+    changePassword,
+    getUser,
+    updateCount,
+    getAllUserOfRoom
 } = require("../controllers/UserController");
 
 router.route("/register").post(register);
 router.route("/login").post(login);
+router.route("/get-user").get(isAuthenticatedUser, getUser);
+router.route("/update-count").post(isAuthenticatedUser, updateCount);
 router.route("/online").post(isAuthenticatedUser, isOnline);
 router.route("/logout").post(logout);
 router.route("/fcm-token").put(isAuthenticatedUser,postFcmToken);
@@ -40,6 +46,7 @@ router.route("/user-detail/:id").get(isAuthenticatedUser, userDetails);
 router.route("/forgot-password").post( forgotpassword);
 router.route("/reset-password").post( resetpassword);
 router.route("/update-password").post( updatePassword);
+router.route("/change-password").post( changePassword);
 router.route("/check-email").post( checkEmail);
 router.route("/delete-code").post( deleteCode);
 router.route("/update/:id").post( isAuthenticatedUser, updateProfile);
@@ -47,6 +54,7 @@ router.route("/refresh-token").post(refreshAccessToken);
 router.route("/search").get( isAuthenticatedUser, getAlluserSameName);
 router.route("/friend/:id").get( isAuthenticatedUser, getAllFriend);
 router.route("/get-chats").get( isAuthenticatedUser, getChats);
+router.route("/get-user-room/:roomId").get( isAuthenticatedUser, getAllUserOfRoom);
 router.route("/get-chat/:idRoom").get( isAuthenticatedUser, getChatUser);
 router.route("/add-friend/:userAdd").post( isAuthenticatedUser, addFriend);
 router.route("/get-all-request-add").get( isAuthenticatedUser, getAllUserWantAdd);

@@ -42,7 +42,7 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email });
     if (!email || !password) {
       res.status(400).json({
         success: false,
@@ -55,17 +55,19 @@ exports.login = async (req, res) => {
         message: "Please check email or password again."
       });
     } else {
-      bcrypt.compare(password, user.password, function (err, result) {
-        if (err) {
-          res.status(401).json({
-            success: false,
-            message: e.message
-          });
-        }
-        sendToken(user, 200, res);
-      });
-    }
+      const passwordMatch = await bcrypt.compare(password, user.password);
 
+      if (passwordMatch) {
+        console.log("user", user);
+        // Call your sendToken function to send a token to the user
+        sendToken(user, 200, res);
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Please check email or password again."
+        });
+      }
+    }
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -74,18 +76,52 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.getUser = async (req, res) => {
+  try {
+    if (req.user) {
+      res.status(200).json({
+        user: req.user
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
+exports.updateCount = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user.id, {
+      countFriendRequest: 0
+    });
+    res.status(200).json({
+      message: "count update success"
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
 exports.postFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
     if (fcmToken) {
-      const user = await User.findById(req.user.id);
-      user.fcmToken = fcmToken;
-      await user.save();
+      await User.findByIdAndUpdate(req.user.id, {
+        fcmToken: fcmToken
+      });
+      res.status(200).json({
+        success: true,
+        message: "Put fcmToken success."
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "No have fcmToken."
+      });
     }
-    res.status(200).json({
-      success: true,
-      message: "Put fcmToken success."
-    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -154,7 +190,7 @@ exports.forgotpassword = async (req, res) => {
     user.resetPasswordTime = Date.now();
 
     await user.save();
-    console.log('user', user);
+    console.log("user", user);
 
     const resetPasswordUrl = `${req.protocol}://${req.get(
       "host"
@@ -268,20 +304,18 @@ exports.deleteCode = async (req, res, next) => {
     if (!user) {
       return next(ErrHandle("Not found email matched", 400, res));
     } else {
-      if(user.code == code) {
-
+      if (user.code == code) {
         user.code = "";
         await user.save({
           validateBeforeSave: false
         });
-    
+
         res.status(200).json({
           success: true,
           message: "Delete Code"
         });
       }
-      }
-
+    }
   } catch (err) {
     res.status(500).json({
       success: false,
@@ -387,33 +421,52 @@ exports.updatePassword = async (req, res, next) => {
   }
 };
 
+// change when forgot password
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { password, confirmPassword, email } = req.body;
+    if (confirmPassword == password) {
+      await User.updateOne(
+        { email: email },
+        { $set: { password: bcrypt.hashSync(password, 10) } }
+      );
+      res.status(200).json({
+        success: true
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
 // update profile user -> ok
 exports.updateProfile = async (req, res) => {
   try {
-    console.log('vao roi');
+    console.log("vao roi");
     const { id } = req.params;
     const { name, email, phone } = req.body;
 
     const user = await User.findById(id);
-    if(user) {
-
+    if (user) {
       console.log("req.file.path", req.imageUrl);
-        user.image = req.imageUrl ?  req.imageUrl : user.image;
-        user.name = name;
-        user.email = email;
-        user.phone = phone;
-        await user.save()
-        
-        res.status(200).json({
-          success: true,
-          message: `${user.name} have updated.`,
-          user: user
-        });
-    }
-     else {
+      user.image = req.imageUrl ? req.imageUrl : user.image;
+      user.name = name;
+      user.email = email;
+      user.phone = phone;
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: `${user.name} have updated.`,
+        user: user
+      });
+    } else {
       res.status(400).json({
         success: false,
-        message: `Update faild.`,
+        message: `Update faild.`
       });
     }
   } catch (err) {
@@ -446,6 +499,8 @@ exports.refreshAccessToken = async (req, res) => {
         expiresIn: "14m"
       }
     );
+    findUser.expiresIn = new Date(Date.now() + 15 * 60 * 1000);
+    await findUser.save();
 
     return res.status(200).json({
       user: findUser,
@@ -466,7 +521,7 @@ exports.getAlluserSameName = async (req, res) => {
       $and: [
         {
           $or: [
-            { username: { $regex: queryName.trim(), $options: "i" } }, // Case-insensitive search
+            { username: { $regex: queryName.trim(), $options: "i" } } // Case-insensitive search
             // { email: { $regex: queryName.trim(), $options: "i" } } // Case-insensitive search
           ]
         },
@@ -476,14 +531,18 @@ exports.getAlluserSameName = async (req, res) => {
 
     // Get the IDs of the current user's friends
     const userCurrent = await User.findById(currentUserId).select("friend");
-    const userCurrentFriend = await User.findById(currentUserId).select("sentFriendRequest");
-   
+    const userCurrentFriend = await User.findById(currentUserId).select(
+      "sentFriendRequest"
+    );
+
     const friendsIds = userCurrent.friend;
     const sentFriendIs = userCurrentFriend.sentFriendRequest;
 
     // Create a map for faster friend lookup
     const friendsMap = new Map(friendsIds.map((id) => [id.toString(), true]));
-    const sentFriendMap = new Map(sentFriendIs.map((id) => [id.user.toString(), true]));
+    const sentFriendMap = new Map(
+      sentFriendIs.map((id) => [id.user.toString(), true])
+    );
 
     // Prepare the list of results
     const listResult = users.map((user) => ({
@@ -491,7 +550,9 @@ exports.getAlluserSameName = async (req, res) => {
       username: user.username,
       image: user.image || "",
       email: user.email,
-      isFriend: friendsMap.has(user._id.toString()) || sentFriendMap.has(user._id.toString()) // Check if the user is a friend
+      isFriend:
+        friendsMap.has(user._id.toString()) ||
+        sentFriendMap.has(user._id.toString()) // Check if the user is a friend
     }));
 
     res.status(200).json({
@@ -524,7 +585,7 @@ exports.getAllFriend = async (req, res) => {
     const resultUser = await User.find({ _id: { $in: listFriend } });
 
     // Format lại dữ liệu nếu cần
-    const formattedUsers = resultUser.map((findUser) => ({
+    const formattedUsers = await resultUser.map((findUser) => ({
       username: findUser.username,
       email: findUser.email,
       image: findUser.image ? findUser.image : "",
@@ -533,19 +594,7 @@ exports.getAllFriend = async (req, res) => {
       fcmToken: findUser.fcmToken ? findUser.fcmToken : ""
     }));
 
-    // await Promise.all(
-    //   listFriend.map( async (user) => {
-    //     let findUser = await User.findById(user);
-    //     let inforUser = {
-    //       username: findUser.username,
-    //       email: findUser.email,
-    //       image: findUser.image,
-    //       id: findUser._id,
-    //       isOnline: findUser.isOnline
-    //     }
-    //     resultUser.push(inforUser);
-    //   })
-    // );
+    console.log("formattedUsers", formattedUsers);
 
     res.status(200).json({
       success: true,
@@ -559,61 +608,11 @@ exports.getAllFriend = async (req, res) => {
   }
 };
 
-// get chats of user -> get last all message
-// exports.getChats = async (req, res) => {
-//   try {
-//     const user = await User.findById(req.user.id);
-//     if (!user) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "User not found"
-//       });
-//     }
-
-//     const lastMessageAll = [];
-//     const listRoom = user.roomId;
-//     await Promise.all(
-//       await listRoom.map(async (value) => {
-//         const findAllMessage = await Message.find({ roomId: value });
-//         findAllMessage.map(async (item) => {
-//           const userFind = item.sender == req.user.id ? item.reciever : item.sender;
-//           const getUser = await User.findById(userFind);
-//           const messages = item.messages;
-//           if (messages.length > 0) {
-//             const lastMessage = messages[messages.length - 1];
-//             const filterMessage =
-//               {
-//                 roomId: item.roomId,
-//                 sender: item.render,
-//                 reciever: item.reciever,
-//                 text: lastMessage.text,
-//                 isOnline: getUser?.isOnline,
-//                 createAt: item.createAt
-//               }
-//             lastMessageAll.push(filterMessage);
-//             console.log(filterMessage);
-//           }
-//         });
-//       })
-//     );
-
-//     res.status(200).json({
-//       success: true,
-//       lastMessageAll
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
-
-
 //  last of all chats
 exports.getChats = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const _id = req.user.id;
+    const user = await User.findById(_id);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -629,64 +628,60 @@ exports.getChats = async (req, res) => {
       const findAllMessage = await Message.findOne({ roomId: value });
       const room = await RoomIdModule.findOne({
         room_id: value
-    });
-      let imageOfFriendChat = '';
-      let nameOfFriendChat = '';
-    console.log("req.user.id === room.senderId.toString()", req.user.id , room.senderId);
-      if(!room.typeRoom) {
-        console.log('one');
-        const idUser = req.user.id == room.senderId.toString()
-        ? room.receverId : room.senderId ;
+      });
+      let imageOfFriendChat = "";
+      let nameOfFriendChat = "";
+      let count = 0;
+      if (!room.typeRoom) {
+        const idUser =
+          _id == room.senderId.toString() ? room.receverId : room.senderId;
         let user = await User.findById(idUser);
         nameOfFriendChat = user.username;
         imageOfFriendChat = user.image;
       } else {
-        console.log('group');
         nameOfFriendChat = room.nameRoom;
         imageOfFriendChat = room.imageRoom;
       }
-      let count = 0;
-     
+
       // Lặp qua các tin nhắn và cập nhật trường 'seen' thành true
       await findAllMessage?.messages?.forEach((msg) => {
-        if (!msg.seen && msg.user.name && msg?.user?._id?.toString() !== req.user.id) {
-          count ++;
+        if (!msg.seen && msg.user.name && msg?.user?._id?.toString() !== _id) {
+          count++;
         }
       });
+      // tin nhắn cuối cùng
       if (findAllMessage) {
-        const lastMessage =
-          findAllMessage.messages[findAllMessage.messages.length - 1];
-        if (lastMessage.text !== "" || lastMessage.image !== '') {
-          // const userFind = findAllMessage.messages.sender == req.user.id ? findAllMessage.reciever : findAllMessage.sender;
-          const userFind = lastMessage.reciever;
+        const lengthMessage = findAllMessage.messages.length;
+        const lastMessage = findAllMessage.messages[lengthMessage - 1];
+        if (lastMessage.text !== "" || lastMessage.image !== "") {
+          const userFind =
+            lastMessage.reciever !== _id && room.typeRoom === "one"
+              ? lastMessage.reciever
+              : lastMessage.sender;
           const getUser = await User.findById(userFind);
 
           const filterMessage = {
             roomId: findAllMessage.roomId,
             sender: {
               id: findAllMessage.sender,
-              username:
-              lastMessage.user.name
+              username: lastMessage.user.name
             },
             reciever: userFind,
-            text: findAllMessage.messages[
-              findAllMessage.messages.length - 1
-            ].text,
-            image:lastMessage.image,
+            text: lastMessage.text,
+            image: lastMessage.image,
             isOnline: getUser?.isOnline,
             imageUser: imageOfFriendChat,
             username: nameOfFriendChat,
-            fcmToken: getUser.fcmToken,
+            fcmToken: getUser?.fcmToken,
             idSender: findAllMessage.messages.user
               ? findAllMessage.messages.user
               : "",
             createAt: lastMessage.createdAt,
-            typeRoom: room.typeRoom ,
+            typeRoom: room.typeRoom,
             imageRoom: imageOfFriendChat,
             nameRoom: nameOfFriendChat,
             count: count
           };
-          console.log("filterMessage", filterMessage);
 
           lastMessageAll.push(filterMessage);
         }
@@ -699,6 +694,34 @@ exports.getChats = async (req, res) => {
     res.status(200).json({
       success: true,
       lastMessageAll
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.getAllUserOfRoom = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const idUser = req.user.id;
+    const users = await User.find();
+    const usersWithMatchingRoom = await users.filter((user) =>
+      user.roomId.includes(roomId) && user._id.toString() !== req.user.id
+    );
+
+    // Lọc _id và username của người dùng
+    const filteredUsers = await usersWithMatchingRoom.map((user) => {
+      return {
+        _id: user._id,
+        username: user.username
+      };
+    });
+    res.status(200).json({
+      success: true,
+      users: filteredUsers
     });
   } catch (error) {
     res.status(500).json({
@@ -741,7 +764,8 @@ exports.addFriend = async (req, res) => {
       };
       // save user want add friend to show friend know
       await User.findByIdAndUpdate(userAdd, {
-        $push: { friendRequest: userRequest }
+        $push: { friendRequest: userRequest },
+        $inc: { countFriendRequest: 1 }
       });
       // save requset of me all user me added friend
       await User.findByIdAndUpdate(req.user.id, {
@@ -777,7 +801,10 @@ exports.removeFriend = async (req, res) => {
       // });
       // save requset of me all user me added friend
       await User.findByIdAndUpdate(req.user.id, {
-        $pull: { friendRequest: { user: userRemove } }
+        $pull: {
+          friendRequest: { user: userRemove },
+          $inc: { countFriendRequest: -1 }
+        }
       });
       res.status(200).json({
         success: true,
@@ -970,15 +997,15 @@ exports.onRoom = async (req, res) => {
 
 exports.imageUrl = async (req, res) => {
   try {
-    console.log('url', req.file);
-    if(req.file) {
+    console.log("url", req.file);
+    if (req.file) {
       res.status(200).json({
         imageUrl: req.file.path
-      })
-    } 
+      });
+    }
   } catch (error) {
     res.status(500).json({
       message: error.message
-    })
+    });
   }
-}
+};

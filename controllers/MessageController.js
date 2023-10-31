@@ -118,22 +118,56 @@ exports.getUrl = async (req, res) => {
 };
 
 // get all message of room one
+// exports.getAllMessageOfRoom = async (req, res) => {
+//   try {
+//     const { idRoom } = req.params;
+//     const { fcmToken } = req.body;
+//     const findRoom = await RoomId.findOne({ room_id: idRoom });
+    
+//     await RoomId.findByIdAndUpdate(findRoom._id, {
+//       $push: { listUserOnline: req.user.id },
+//       $pull: { listUserOffline: fcmToken }
+//     });
+//     const roomUpdate = await RoomId.findOne({ room_id: idRoom });
+//       res.status(200).json({
+//         success: true,
+//         message: 'Post online or offline',
+//         listOffline: roomUpdate.listUserOffline
+//       });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
 exports.getAllMessageOfRoom = async (req, res) => {
   try {
     const { idRoom } = req.params;
     const { fcmToken } = req.body;
-    const findRoom = await RoomId.find({ room_id: idRoom });
-    
-    await RoomId.findByIdAndUpdate(findRoom[0]._id, {
-      $push: { listUserOnline: req.user.id },
-      $pull: { listUserOffline: fcmToken }
-    });
-    const roomUpdate = await RoomId.find({ room_id: idRoom });
-      res.status(200).json({
+    const findRoom = await RoomId.findOne({ room_id: idRoom });
+
+    if (!findRoom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat room not found'
+      });
+    }
+
+      await RoomId.findByIdAndUpdate(findRoom._id, {
+        $push: { listUserOnline: req.user.id },
+        $pull: { listUserOffline: fcmToken }
+      });
+
+      const roomUpdate = await RoomId.findOne({ room_id: idRoom });
+
+      return res.status(200).json({
         success: true,
         message: 'Post online or offline',
-        listOffline: roomUpdate[0].listUserOffline
+        listOffline: roomUpdate.listUserOffline
       });
+   
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -150,6 +184,10 @@ exports.checkMessage = async (req, res) => {
     const { limit, nextPage } = req.query;
     const message = await Message.findOne({ roomId: id });
     const lengthMessage = message.messages.length;
+    const limitNumber = Number(limit);
+    const nextPageNumber = Number(nextPage)
+    Number(limit)
+    Number(nextPage)
 
     if (!message) {
       return res.status(404).json({
@@ -168,13 +206,14 @@ exports.checkMessage = async (req, res) => {
 
     // Lưu lại tài liệu đã được cập nhật
     await message.save();
-    
+    const copyMessage = await message.messages.reverse();
+    const check = lengthMessage -  (nextPageNumber * limitNumber)
     let limitMessage = [];
-    console.log(Number(nextPage * limit) + Number(limit) );
-    if((Number(nextPage * limit) + Number(limit))<= lengthMessage) {
-      limitMessage = message.messages.slice(lengthMessage - 1 - ((nextPage * limit), lengthMessage - 1 - (nextPage * limit) + limit))
-    } else if(Number(nextPage * limit) <= lengthMessage) {
-      limitMessage = message.messages.slice(0 , lengthMessage - 1 - (nextPage * limit))
+    console.log(nextPageNumber, lengthMessage);
+    if(check > 0 ) {
+      limitMessage = copyMessage.slice((nextPageNumber - 1) * limitNumber, (nextPageNumber * limitNumber));
+    } else if( check < 0) {
+      limitMessage = copyMessage.slice((nextPageNumber - 1) * limitNumber, lengthMessage)
     } else {
       limitMessage = []
     };
@@ -182,6 +221,7 @@ exports.checkMessage = async (req, res) => {
     res.status(200).json({
       success: true,
       messages: limitMessage,
+      page: nextPageNumber
     });
   } catch (error) {
     res.status(500).json({
